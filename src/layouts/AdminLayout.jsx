@@ -21,7 +21,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:flex">
         <Link to="/admin" className="mb-6 flex shrink-0 items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700">
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-transparent shadow-sm dark:border-slate-700">
             <img src={logo} alt="Alojamiento JJ" className="h-full w-full object-contain p-1" />
           </span>
           <span>
