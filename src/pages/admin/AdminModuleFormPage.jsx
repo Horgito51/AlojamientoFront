@@ -102,14 +102,28 @@ export default function AdminModuleFormPage() {
     )
   }
 
+  const formatNumber = (value) => {
+    const numberValue = Number(value)
+    return Number.isNaN(numberValue) ? 0 : numberValue
+  }
+
   const updateForm = (event) => {
     const { name, value, type, checked, multiple, selectedOptions } = event.target
-    if (multiple) {
-      const values = Array.from(selectedOptions).map((opt) => opt.value)
-      setForm((current) => ({ ...current, [name]: values }))
-    } else {
-      setForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }))
-    }
+
+    setForm((current) => {
+      const updatedValue = multiple ? Array.from(selectedOptions).map((opt) => opt.value) : type === 'checkbox' ? checked : value
+      const nextForm = { ...current, [name]: updatedValue }
+
+      if (moduleKey === 'tipos-habitacion') {
+        if (name === 'capacidadAdultos' || name === 'capacidadNinos') {
+          const adultos = formatNumber(nextForm.capacidadAdultos)
+          const ninos = formatNumber(nextForm.capacidadNinos)
+          nextForm.capacidadTotal = adultos + ninos
+        }
+      }
+
+      return nextForm
+    })
   }
 
   const handleFileChange = (fieldName, event) => {
@@ -181,8 +195,18 @@ export default function AdminModuleFormPage() {
       )
     }
 
+    const isComputedCapacityTotal = moduleKey === 'tipos-habitacion' && field.name === 'capacidadTotal'
     return (
-      <input name={field.name} type={field.type} step={field.step} required={field.required} value={form[field.name] ?? ''} onChange={updateForm} className="rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+      <input
+        name={field.name}
+        type={field.type}
+        step={field.step}
+        required={field.required}
+        readOnly={isComputedCapacityTotal}
+        value={form[field.name] ?? ''}
+        onChange={updateForm}
+        className="rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+      />
     )
   }
 

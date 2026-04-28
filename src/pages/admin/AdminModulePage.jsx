@@ -103,8 +103,10 @@ export default function AdminModulePage() {
   const [showPayment, setShowPayment] = useState(false)
   const [selectedReserva, setSelectedReserva] = useState(null)
   const [paymentInvoiceFilter, setPaymentInvoiceFilter] = useState('')
+  const [relationOptions, setRelationOptions] = useState({})
 
   const columns = useMemo(() => module?.columns || [], [module])
+  const relationFields = useMemo(() => module?.fields?.filter((field) => field.type === 'relation') || [], [module])
 
   const load = async () => {
     if (!module) return
@@ -127,6 +129,37 @@ export default function AdminModulePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleKey, paymentInvoiceFilter])
 
+  useEffect(() => {
+    if (relationFields.length === 0) return
+
+    let alive = true
+    Promise.all(
+      relationFields.map((field) =>
+        adminApi.list(field.endpoint)
+          .then((items) => {
+            const options = items
+              .map((item) => {
+                const value = field.valueKeys.map((key) => readValue(item, key)).find((itemValue) => itemValue !== '')
+                const labelParts = field.labelKeys.map((key) => readValue(item, key)).filter(Boolean)
+                return {
+                  value,
+                  label: labelParts.length ? labelParts.join(' - ') : String(value),
+                }
+              })
+              .filter((option) => option.value !== undefined && option.value !== null && option.value !== '')
+            return [field.name, options]
+          })
+          .catch(() => [field.name, []]),
+      ),
+    ).then((entries) => {
+      if (alive) setRelationOptions(Object.fromEntries(entries))
+    })
+
+    return () => {
+      alive = false
+    }
+  }, [relationFields])
+
   if (!module) {
     return <div className="rounded-lg bg-white p-6 dark:bg-slate-900">Modulo no encontrado.</div>
   }
@@ -138,10 +171,13 @@ export default function AdminModulePage() {
       return <img src={value} alt="Imagen" className="h-10 w-14 rounded object-cover" />
     }
     const field = module.fields?.find((item) => item.name === column)
+    const relationOptionsForField = field?.type === 'relation' ? relationOptions[field.name] || [] : []
+    const relationOption = relationOptionsForField.find((option) => String(option.value) === String(value))
+    const relationLabel = relationOption?.label
     const rawLabel = getFieldValueLabel(field, value) ?? ''
     const label = column === 'activo'
       ? value ? 'Activo' : 'Inactivo'
-      : rawLabel
+      : relationLabel || rawLabel
 
     if (isStatusField(column)) {
       const tone = getStatusTone(value, label)
