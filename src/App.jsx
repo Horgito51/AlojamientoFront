@@ -30,6 +30,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           {/* Rutas específicas de reservas (formulario dedicado con cálculo automático) */}
           <Route path="reservas/nuevo" element={<ReservaFormPage />} />
+          <Route path="reservas/:recordId/editar" element={<ReservaFormPage />} />
           {/* Rutas genéricas para los demás módulos */}
           <Route path=":moduleKey/nuevo" element={<AdminModuleFormPage />} />
           <Route path=":moduleKey/:recordId/editar" element={<AdminModuleFormPage />} />
