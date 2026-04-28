@@ -3,7 +3,7 @@ import 'sweetalert2/dist/sweetalert2.min.css'
 
 const isDarkTheme = () => document.documentElement.classList.contains('dark')
 
-const themeOptions = () => {
+export const themeOptions = () => {
   const isDark = isDarkTheme()
   return {
     background: isDark ? '#0f172a' : '#ffffff',
@@ -64,6 +64,16 @@ export const showError = (title, text) =>
     iconColor: '#ef4444',
     title,
     html: typeof text === 'string' ? text : getErrorMessage(text),
+  })
+
+export const showInfo = (title, text, options = {}) =>
+  Swal.fire({
+    ...themeOptions(),
+    icon: 'info',
+    iconColor: '#4f46e5',
+    title,
+    html: text,
+    ...options,
   })
 
 export const showLoading = (title = 'Procesando...', text = 'Por favor espera un momento.') =>

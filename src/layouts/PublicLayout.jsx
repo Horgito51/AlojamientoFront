@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 
@@ -18,7 +18,6 @@ function ThemeButton() {
 }
 
 export default function PublicLayout() {
-  const navigate = useNavigate()
   const { isAuthenticated, logout, hasRole } = useAuth()
   const loggedIn = isAuthenticated()
   const isAdmin = hasRole('ADMINISTRADOR') || hasRole('ADMIN') || hasRole('OPERATIVO') || hasRole('DESK_SERVICE')

@@ -31,8 +31,9 @@ export default function AdminModuleFormPage() {
   const loadingRelations = relationFields.some((field) => !relationOptions[field.name])
 
   useEffect(() => {
+    const previewUrls = previewUrlsRef.current
     return () => {
-      Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url))
+      Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url))
     }
   }, [])
 
@@ -191,6 +192,35 @@ export default function AdminModuleFormPage() {
     setSaving(true)
     try {
       let enrichedForm = { ...form }
+      const requiredError = (module.fields || []).find((field) => {
+        if (!field.required) return false
+        const value = enrichedForm[field.name]
+        if (field.type === 'checkbox') return false
+        if (field.multiple) return !Array.isArray(value) || value.length === 0
+        return value === undefined || value === null || String(value).trim() === ''
+      })
+
+      if (requiredError) {
+        const message = `El campo "${getFieldLabel(requiredError)}" es obligatorio.`
+        setError(message)
+        await showError('Formulario incompleto', message)
+        setSaving(false)
+        return
+      }
+
+      const invalidNumber = (module.fields || []).find((field) => {
+        if (!['number'].includes(field.type)) return false
+        const value = enrichedForm[field.name]
+        return value !== undefined && value !== null && String(value).trim() !== '' && Number.isNaN(Number(value))
+      })
+
+      if (invalidNumber) {
+        const message = `El campo "${getFieldLabel(invalidNumber)}" debe ser numerico.`
+        setError(message)
+        await showError('Dato invalido', message)
+        setSaving(false)
+        return
+      }
 
       const imageFields = (module.fields || []).filter((f) => f.type === 'image')
       for (const field of imageFields) {

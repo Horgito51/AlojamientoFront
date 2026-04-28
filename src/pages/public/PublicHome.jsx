@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { bookingApi } from '../../api/bookingApi'
 import RoomCard from '../../components/common/RoomCard'
-import logo from '../../assets/images/Logo.png'
 import banner from '../../assets/images/banner.png'
 import hotelImg from '../../assets/images/hotelJJ.png'
 
@@ -43,7 +42,6 @@ export default function PublicHome() {
           className="absolute inset-0 h-full w-full object-cover brightness-50"
         />
         <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col items-center justify-center px-4 text-center text-white sm:px-6 lg:px-8">
-          <img src={logo} alt="Logo" className="mb-8 h-32 w-auto animate-fade-in drop-shadow-2xl sm:h-40" />
           <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight sm:text-6xl">
             Tu refugio perfecto en el corazón de Cuenca
           </h1>

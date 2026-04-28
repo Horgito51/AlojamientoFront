@@ -29,6 +29,10 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       if (value.length >= 2) value = value.substring(0, 2) + '/' + value.substring(2)
     }
 
+    if (name === 'cvv') {
+      value = value.replace(/\D/g, '').substring(0, 4)
+    }
+
     setCard((current) => ({ ...current, [name]: value }))
     setError('')
   }
@@ -36,8 +40,23 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   const pay = async (event) => {
     event.preventDefault()
 
-    if (!card.name.trim() || !card.expiry.trim() || !card.cvv.trim()) {
-      setError('Por favor, completa todos los datos de la tarjeta.')
+    const cardNumber = card.number.replace(/\D/g, '')
+    const [expiryMonth, expiryYear] = card.expiry.split('/').map((item) => Number(item))
+    const currentYear = Number(String(new Date().getFullYear()).slice(-2))
+    const currentMonth = new Date().getMonth() + 1
+
+    if (!card.name.trim() || cardNumber.length !== 16 || !card.expiry.trim() || !card.cvv.trim()) {
+      setError('Completa nombre, numero de tarjeta, expiracion y CVC.')
+      return
+    }
+
+    if (!expiryMonth || expiryMonth < 1 || expiryMonth > 12 || !expiryYear || expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+      setError('La fecha de expiracion no es valida.')
+      return
+    }
+
+    if (!/^\d{3,4}$/.test(card.cvv)) {
+      setError('El CVC debe tener 3 o 4 digitos.')
       return
     }
 
@@ -92,7 +111,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       if (createdReservaId && status !== 'success') {
         try {
           await reservationService.cancelReserva(createdReservaId, 'Error técnico durante el proceso de pago.')
-        } catch (c) { /* ignore */ }
+        } catch { /* ignore */ }
       }
 
       setStatus('error')
@@ -149,6 +168,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
                     value={card.number} 
                     onChange={update} 
                     placeholder="0000 0000 0000 0000"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900" 
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -184,6 +205,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
                     value={card.expiry} 
                     onChange={update} 
                     placeholder="MM / YY" 
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900" 
                   />
                 </div>
@@ -197,6 +220,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
                     onChange={update} 
                     maxLength="4" 
                     type="password"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
                     placeholder="•••"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:bg-slate-900" 
                   />

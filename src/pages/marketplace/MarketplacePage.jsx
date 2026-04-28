@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import Swal from 'sweetalert2'
 import { reservationService } from '../../api/reservationService'
 import { APP_CONFIG } from '../../config/appConfig'
 import { useAuth } from '../../hooks/useAuth'
+import { showError, showSuccess } from '../../utils/sweetAlert'
 import RoomCard from '../../components/marketplace/RoomCard'
 import ReservationSummary from '../../components/marketplace/ReservationSummary'
 import DateRangePicker from '../../components/marketplace/DateRangePicker'
@@ -14,58 +14,6 @@ const getRoomId = (room) => Number(room.idHabitacion ?? room.IdHabitacion ?? roo
 const getRoomSucursalId = (room) => Number(room.idSucursal ?? room.IdSucursal ?? room.sucursalId ?? APP_CONFIG.DEFAULT_SUCURSAL_ID)
 const toApiDate = (value) => `${value}T00:00:00`
 
-const getApiMessage = (error) => {
-  console.error('Reservation error:', error?.response?.data || error)
-
-  const data = error?.response?.data
-  if (!data) return error?.message || 'No se pudo crear la reserva.'
-  if (typeof data === 'string') {
-    return data.includes('No se generaron detalles de reserva')
-      ? 'No pudimos confirmar la reserva en este momento. Intenta de nuevo en unos segundos.'
-      : data
-  }
-  if (typeof data.message === 'string') {
-    return data.message.includes('No se generaron detalles de reserva')
-      ? 'No pudimos confirmar la reserva en este momento. Intenta de nuevo en unos segundos.'
-      : data.message
-  }
-  if (typeof data.error === 'string') {
-    return data.error.includes('No se generaron detalles de reserva')
-      ? 'No pudimos confirmar la reserva en este momento. Intenta de nuevo en unos segundos.'
-      : data.error
-  }
-  if (typeof data.title === 'string') return data.title
-
-  const errors = data.errors || data.Errors
-  if (errors && typeof errors === 'object') {
-    return Object.entries(errors)
-      .flatMap(([field, messages]) => {
-        const list = Array.isArray(messages) ? messages : [messages]
-        return list.map((message) => `${field}: ${message}`)
-      })
-      .join('\n')
-  }
-
-  return 'No se pudo crear la reserva.'
-}
-
-const isAuthError = (error) => {
-  const status = error?.response?.status
-  if (status === 401 || status === 403) return true
-
-  const rawMessage = [
-    error?.response?.data?.message,
-    error?.response?.data?.error,
-    error?.response?.data?.title,
-    error?.message,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-  return ['token', 'autenticado', 'autoriz', 'sesion', 'cliente asociado'].some((term) => rawMessage.includes(term))
-}
-
 const MarketplacePage = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -73,12 +21,10 @@ const MarketplacePage = () => {
   const [rooms, setRooms] = useState([])
   const [selectedRooms, setSelectedRooms] = useState([])
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [observaciones, setObservaciones] = useState('')
   const [error, setError] = useState(null)
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' })
-  const [createdReservation, setCreatedReservation] = useState(null)
   const [paymentResult, setPaymentResult] = useState(null)
 
   useEffect(() => {
@@ -146,22 +92,22 @@ const MarketplacePage = () => {
     const end = new Date(`${dates.checkOut}T00:00:00`)
 
     if (!dates.checkIn || !dates.checkOut) {
-      Swal.fire('Error', 'Selecciona fecha de entrada y salida.', 'error')
+      showError('Error', 'Selecciona fecha de entrada y salida.')
       return false
     }
 
     if (start < today) {
-      Swal.fire('Error', 'La fecha de inicio no puede ser en el pasado.', 'error')
+      showError('Error', 'La fecha de inicio no puede ser en el pasado.')
       return false
     }
 
     if (end <= start) {
-      Swal.fire('Error', 'La fecha de fin debe ser posterior a la de inicio.', 'error')
+      showError('Error', 'La fecha de fin debe ser posterior a la de inicio.')
       return false
     }
 
     if (selectedRooms.length === 0) {
-      Swal.fire('Error', 'Selecciona al menos una habitacion.', 'error')
+      showError('Error', 'Selecciona al menos una habitacion.')
       return false
     }
 
@@ -236,7 +182,6 @@ const MarketplacePage = () => {
   }
 
   const handlePaymentSuccess = (reserva) => {
-    setCreatedReservation(reserva)
     setPaymentResult({ success: true })
     setShowPaymentModal(false)
     setShowConfirm(false)
@@ -246,7 +191,7 @@ const MarketplacePage = () => {
     setPendingPayload(null)
     
     const code = reserva?.codigoReserva || reserva?.idReserva || 'confirmada'
-    Swal.fire('¡Éxito!', `Tu reserva ha sido pagada y creada correctamente. Código: ${code}.`, 'success')
+    showSuccess('Reserva completada', `Tu reserva ha sido pagada y creada correctamente. Codigo: ${code}.`)
   }
 
   return (
@@ -318,8 +263,8 @@ const MarketplacePage = () => {
                     placeholder="Opcional"
                   />
                 </label>
-                <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl bg-indigo-600 py-4 text-center font-bold text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
-                  {submitting ? 'Confirmando...' : 'Confirmar reserva'}
+                <button type="submit" className="mt-6 w-full rounded-xl bg-indigo-600 py-4 text-center font-bold text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  Confirmar reserva
                 </button>
               </form>
             )}
@@ -328,7 +273,7 @@ const MarketplacePage = () => {
               selectedRooms={selectedRooms}
               nights={nights}
               totals={totals}
-              loading={submitting}
+              loading={false}
               onConfirm={handleContinueToReservation}
               confirmLabel={showConfirm ? 'Actualizar seleccion' : 'Continuar'}
             />

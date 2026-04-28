@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { reservationService } from '../../api/reservationService'
 import { useAuth } from '../../hooks/useAuth'
-import Swal from 'sweetalert2'
-import { getErrorMessage } from '../../utils/sweetAlert'
+import { showError } from '../../utils/sweetAlert'
 import { Link } from 'react-router-dom'
 
 const EstadoBadge = ({ estado }) => {
@@ -26,17 +25,9 @@ const EstadoBadge = ({ estado }) => {
 export default function MisReservasPage() {
   const { isAuthenticated } = useAuth()
   const [reservas, setReservas] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (isAuthenticated()) {
-      fetchReservas()
-    } else {
-      setLoading(false)
-    }
-  }, [isAuthenticated])
-
-  const fetchReservas = async () => {
+  const fetchReservas = useCallback(async () => {
     try {
       setLoading(true)
       const response = await reservationService.getMisReservas({ limit: 100 })
@@ -46,18 +37,17 @@ export default function MisReservasPage() {
       const sorted = Array.isArray(data) ? [...data].sort((a, b) => new Date(b.fechaRegistroUtc) - new Date(a.fechaRegistroUtc)) : []
       setReservas(sorted)
     } catch (error) {
-      Swal.fire({
-        title: 'Error',
-        text: getErrorMessage(error) || 'No se pudieron cargar tus reservas.',
-        icon: 'error',
-        confirmButtonColor: '#4f46e5',
-        background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
-        color: document.documentElement.classList.contains('dark') ? '#f8fafc' : '#0f172a'
-      })
+      showError('Error', error || 'No se pudieron cargar tus reservas.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      Promise.resolve().then(fetchReservas)
+    }
+  }, [fetchReservas, isAuthenticated])
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A'

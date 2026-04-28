@@ -97,9 +97,12 @@ export default function AdminModulePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [invoiceDetail, setInvoiceDetail] = useState(null)
+  const [paymentDetail, setPaymentDetail] = useState(null)
   const [loadingInvoiceDetail, setLoadingInvoiceDetail] = useState(false)
+  const [loadingPaymentDetail, setLoadingPaymentDetail] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [selectedReserva, setSelectedReserva] = useState(null)
+  const [paymentInvoiceFilter, setPaymentInvoiceFilter] = useState('')
 
   const columns = useMemo(() => module?.columns || [], [module])
 
@@ -108,7 +111,9 @@ export default function AdminModulePage() {
     setLoading(true)
     setError('')
     try {
-      const items = await adminApi.list(module.endpoint)
+      const items = moduleKey === 'pagos' && paymentInvoiceFilter
+        ? await adminApi.list(ENDPOINTS.INTERNAL.PAGOS.byFactura(paymentInvoiceFilter))
+        : await adminApi.list(module.endpoint)
       setRows(items)
     } catch {
       setError('No se pudo cargar el modulo. Verifica backend o permisos.')
@@ -120,7 +125,7 @@ export default function AdminModulePage() {
   useEffect(() => {
     Promise.resolve().then(load)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleKey])
+  }, [moduleKey, paymentInvoiceFilter])
 
   if (!module) {
     return <div className="rounded-lg bg-white p-6 dark:bg-slate-900">Modulo no encontrado.</div>
@@ -183,9 +188,28 @@ export default function AdminModulePage() {
     }
   }
 
-  const runAction = async (action, row) => {
+  const openPaymentDetail = async (row) => {
     const id = getRowId(row)
     if (!id) return
+
+    setLoadingPaymentDetail(true)
+    setPaymentDetail(row)
+    try {
+      const detail = await adminApi.get(ENDPOINTS.INTERNAL.PAGOS, id)
+      setPaymentDetail(detail || row)
+    } catch {
+      await showError('No se pudo cargar el detalle', 'Se mostrara la informacion disponible en la tabla.')
+    } finally {
+      setLoadingPaymentDetail(false)
+    }
+  }
+
+  const runAction = async (action, row) => {
+    const id = getRowId(row)
+    if (!id) {
+      await showError('Accion no disponible', 'No se pudo identificar el registro seleccionado.')
+      return
+    }
     setError('')
     try {
       if (action === 'confirmarReserva') await adminApi.patch(ENDPOINTS.INTERNAL.RESERVAS.confirmar(id))
@@ -217,6 +241,17 @@ export default function AdminModulePage() {
             onClick={() => openInvoiceDetail(row)}
             className="admin-action-button admin-action-view"
             title="Ver detalle de factura"
+          >
+            <ActionIcon name="view" />
+            <span>Ver</span>
+          </button>
+        )}
+        {moduleKey === 'pagos' && (
+          <button
+            type="button"
+            onClick={() => openPaymentDetail(row)}
+            className="admin-action-button admin-action-view"
+            title="Ver detalle de pago"
           >
             <ActionIcon name="view" />
             <span>Ver</span>
@@ -272,6 +307,42 @@ export default function AdminModulePage() {
 
       {error && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
+      {moduleKey === 'pagos' && (
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <form
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            onSubmit={(event) => {
+              event.preventDefault()
+              Promise.resolve().then(load)
+            }}
+          >
+            <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
+              Filtrar por factura
+              <input
+                type="number"
+                min="1"
+                value={paymentInvoiceFilter}
+                onChange={(event) => setPaymentInvoiceFilter(event.target.value)}
+                placeholder="ID de factura"
+                className="rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+              />
+            </label>
+            <div className="flex gap-2">
+              <button type="submit" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                Consultar
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentInvoiceFilter('')}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+              >
+                Ver todos
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
       {loading ? (
         <div className="rounded-lg bg-white p-8 text-center text-slate-500 dark:bg-slate-900">Cargando...</div>
       ) : rows.length === 0 ? (
@@ -294,6 +365,24 @@ export default function AdminModulePage() {
           onClose={() => setInvoiceDetail(null)}
           renderStatus={(value) => {
             const label = getFieldValueLabel(module.fields?.find((field) => field.name === 'estado'), value) || value
+            const tone = getStatusTone(value, label)
+            return (
+              <span className={`admin-status-badge admin-status-${tone}`}>
+                <span className="admin-status-dot" aria-hidden="true" />
+                {label || 'Sin estado'}
+              </span>
+            )
+          }}
+        />
+      )}
+
+      {paymentDetail && (
+        <PaymentDetailModal
+          payment={paymentDetail}
+          loading={loadingPaymentDetail}
+          onClose={() => setPaymentDetail(null)}
+          renderStatus={(value) => {
+            const label = getFieldValueLabel(module.fields?.find((field) => field.name === 'estadoPago'), value) || value
             const tone = getStatusTone(value, label)
             return (
               <span className={`admin-status-badge admin-status-${tone}`}>
@@ -446,6 +535,85 @@ function InvoiceDetailModal({ invoice, loading, onClose, renderStatus }) {
             <section className="mt-6 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
               <h3 className="font-bold text-slate-900 dark:text-white">Observaciones</h3>
               <p className="mt-2">{fieldValue(invoice, 'observacionesFactura')}</p>
+            </section>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function PaymentDetailModal({ payment, loading, onClose, renderStatus }) {
+  const currency = fieldValue(payment, 'moneda', 'USD')
+  const gatewayItems = [
+    ['Proveedor', fieldValue(payment, 'proveedorPasarela', 'No especificado')],
+    ['Transaccion', fieldValue(payment, 'transaccionExterna', 'No registrada')],
+    ['Autorizacion', fieldValue(payment, 'codigoAutorizacion', 'No registrada')],
+    ['Referencia', fieldValue(payment, 'referencia', 'No registrada')],
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={onClose} aria-label="Cerrar detalle" />
+      <section className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Detalle de pago</p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+              Pago {fieldValue(payment, 'idPago', 'sin identificador')}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Fecha: {formatDate(fieldValue(payment, 'fechaPagoUtc'))}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="admin-icon-button" aria-label="Cerrar">
+            <ActionIcon name="cancel" />
+          </button>
+        </header>
+
+        <div className="overflow-y-auto px-6 py-5">
+          {loading && <div className="mb-4 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200">Cargando detalle completo...</div>}
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="invoice-detail-card md:col-span-2">
+              <span className="invoice-detail-label">Estado</span>
+              <div className="mt-2">{renderStatus(fieldValue(payment, 'estadoPago'))}</div>
+            </div>
+            <div className="invoice-detail-card">
+              <span className="invoice-detail-label">Factura</span>
+              <strong>{fieldValue(payment, 'idFactura', 'Sin factura')}</strong>
+            </div>
+            <div className="invoice-detail-card">
+              <span className="invoice-detail-label">Reserva</span>
+              <strong>{fieldValue(payment, 'idReserva', 'Sin reserva')}</strong>
+            </div>
+            <div className="invoice-detail-card md:col-span-2">
+              <span className="invoice-detail-label">Monto</span>
+              <strong className="text-2xl text-indigo-600 dark:text-indigo-300">{formatCurrency(fieldValue(payment, 'monto'), currency)}</strong>
+            </div>
+            <div className="invoice-detail-card">
+              <span className="invoice-detail-label">Metodo</span>
+              <strong>{fieldValue(payment, 'metodoPago', 'No especificado')}</strong>
+            </div>
+            <div className="invoice-detail-card">
+              <span className="invoice-detail-label">Electronico</span>
+              <strong>{fieldValue(payment, 'esPagoElectronico') ? 'Si' : 'No'}</strong>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            {gatewayItems.map(([label, value]) => (
+              <div key={label} className="invoice-detail-card">
+                <span className="invoice-detail-label">{label}</span>
+                <strong className="break-words">{value}</strong>
+              </div>
+            ))}
+          </div>
+
+          {fieldValue(payment, 'respuestaPasarela') && (
+            <section className="mt-6 rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+              <h3 className="font-bold text-slate-900 dark:text-white">Respuesta de pasarela</h3>
+              <p className="mt-2">{fieldValue(payment, 'respuestaPasarela')}</p>
             </section>
           )}
         </div>

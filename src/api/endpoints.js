@@ -86,6 +86,7 @@ export const ENDPOINTS = {
     PAGOS: {
       base: `api/${API_VERSION}/internal/pagos`,
       byId: (id) => `api/${API_VERSION}/internal/pagos/${id}`,
+      byFactura: (idFactura) => `api/${API_VERSION}/internal/pagos/factura/${idFactura}`,
       estado: (id) => `api/${API_VERSION}/internal/pagos/${id}/estado`,
       simular: `api/${API_VERSION}/pagos/simular`,
     },

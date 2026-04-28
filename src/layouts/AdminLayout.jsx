@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { adminNavigation } from '../data/adminModules'
 import { useAuth } from '../hooks/useAuth'
+import logo from '../assets/images/Logo.png'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
@@ -20,7 +21,9 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:flex">
         <Link to="/admin" className="mb-6 flex shrink-0 items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white">JJ</span>
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700">
+            <img src={logo} alt="Alojamiento JJ" className="h-full w-full object-contain p-1" />
+          </span>
           <span>
             <span className="block text-sm font-bold">Panel administrativo</span>
             <span className="text-xs text-slate-500">Alojamiento JJ</span>

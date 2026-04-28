@@ -19,11 +19,40 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCardData(prev => ({ ...prev, [name]: value }));
+    let nextValue = value;
+    if (name === 'number') nextValue = value.replace(/\D/g, '').slice(0, 16);
+    if (name === 'cvv') nextValue = value.replace(/\D/g, '').slice(0, 4);
+    if (name === 'expiry') {
+      const digits = value.replace(/\D/g, '').slice(0, 4);
+      nextValue = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+    }
+    setCardData(prev => ({ ...prev, [name]: nextValue }));
   };
 
   const handlePayment = async (e) => {
     e.preventDefault();
+    const [expiryMonth, expiryYear] = cardData.expiry.split('/').map((item) => Number(item));
+    const currentYear = Number(String(new Date().getFullYear()).slice(-2));
+    const currentMonth = new Date().getMonth() + 1;
+
+    if (!cardData.name.trim() || cardData.number.length !== 16 || !cardData.expiry || !cardData.cvv) {
+      setStatus('error');
+      setErrorMessage('Completa nombre, numero de tarjeta, expiracion y CVV.');
+      return;
+    }
+
+    if (!expiryMonth || expiryMonth < 1 || expiryMonth > 12 || !expiryYear || expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+      setStatus('error');
+      setErrorMessage('La fecha de expiracion no es valida.');
+      return;
+    }
+
+    if (!/^\d{3,4}$/.test(cardData.cvv)) {
+      setStatus('error');
+      setErrorMessage('El CVV debe tener 3 o 4 digitos.');
+      return;
+    }
+
     setLoading(true);
     setStatus('processing');
     setErrorMessage('');
@@ -64,6 +93,10 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       const idReserva = activeReserva?.IdReserva ?? activeReserva?.idReserva ?? activeReserva?.id ?? activeReserva?.Id;
       const totalToPay = activeReserva?.TotalReserva ?? activeReserva?.totalReserva ?? activeReserva?.total ?? activeReserva?.Total;
 
+      if (!idReserva || !Number(totalToPay)) {
+        throw new Error('No se pudo obtener la reserva o el total a pagar.');
+      }
+
       // 2. Procesar Pago (Simulación) con ID REAL
       const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic);
       
@@ -73,7 +106,7 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         // 3. Si falla, cancelamos
         try {
           await reservasApi.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
-        } catch (c) { /* ignore */ }
+        } catch { /* ignore */ }
         
         setStatus('error');
         setErrorMessage(paymentResult?.mensaje || paymentResult?.Mensaje || 'La tarjeta fue rechazada. La reserva ha sido cancelada por seguridad.');
@@ -166,6 +199,8 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
                   name="number"
                   placeholder="0000 0000 0000 0000"
                   maxLength="16"
+                  inputMode="numeric"
+                  autoComplete="cc-number"
                   required
                   value={cardData.number}
                   onChange={handleInputChange}
@@ -181,6 +216,8 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
                     name="expiry"
                     placeholder="MM/YY"
                     maxLength="5"
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
                     required
                     value={cardData.expiry}
                     onChange={handleInputChange}
@@ -193,7 +230,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
                     type="password"
                     name="cvv"
                     placeholder="***"
-                    maxLength="3"
+                    maxLength="4"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
                     required
                     value={cardData.cvv}
                     onChange={handleInputChange}
