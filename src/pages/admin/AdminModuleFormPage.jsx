@@ -194,8 +194,8 @@ export default function AdminModuleFormPage() {
       let enrichedForm = { ...form }
       const requiredError = (module.fields || []).find((field) => {
         if (!field.required) return false
+        if (field.type === 'checkbox' || field.type === 'image') return false
         const value = enrichedForm[field.name]
-        if (field.type === 'checkbox') return false
         if (field.multiple) return !Array.isArray(value) || value.length === 0
         return value === undefined || value === null || String(value).trim() === ''
       })
