@@ -9,9 +9,9 @@ export const reservationService = {
   /**
    * Obtiene todas las habitaciones disponibles para el marketplace
    */
-  async getHabitaciones() {
+  async getHabitaciones(params = {}) {
     try {
-      const { data } = await api.get(ENDPOINTS.PUBLIC.HABITACIONES);
+      const { data } = await api.get(ENDPOINTS.PUBLIC.HABITACIONES, { params });
       return normalizeList(data);
     } catch (error) {
       console.error('Error fetching rooms:', error);

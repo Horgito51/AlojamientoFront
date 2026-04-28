@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { paymentApi } from '../../api/paymentApi';
 import { reservasApi } from '../../api/reservasApi';
+import { getErrorMessage } from '../../utils/sweetAlert';
 
 const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) => {
   const [loading, setLoading] = useState(false);
@@ -28,25 +29,50 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
     setErrorMessage('');
 
     try {
-      // 1. Generar Factura primero (según requerimiento de asociar factura)
-      // En algunos flujos esto podría ser automático en el backend, 
-      // pero el requerimiento pide llamarlo.
-      try {
-        await paymentApi.generarFactura(reserva.idReserva || reserva.id);
-      } catch (err) {
-        console.error("Error generating invoice:", err);
-        // Continuamos si el error es porque ya existe o algo similar, 
-        // pero idealmente el backend lo maneja.
+      let activeReserva = reserva;
+
+      // Si es un flujo de creación pendiente (público)
+      if (reserva.clientePayload && reserva.reservaPayload) {
+        // 1. Crear Cliente
+        const cliente = await reservasApi.createCliente(reserva.clientePayload);
+        const clienteId = cliente.idCliente ?? cliente.id;
+
+        // 2. Crear Reserva
+        const { room, form, totals } = reserva.reservaPayload;
+        const payload = {
+          idCliente: Number(clienteId),
+          idSucursal: Number(room.idSucursal ?? 1),
+          fechaInicio: new Date(`${form.fechaInicio}T12:00:00`).toISOString(),
+          fechaFin: new Date(`${form.fechaFin}T12:00:00`).toISOString(),
+          subtotalReserva: totals.subtotal,
+          valorIva: totals.iva,
+          totalReserva: totals.total,
+          descuentoAplicado: 0,
+          saldoPendiente: totals.total,
+          origenCanalReserva: 'WEB',
+          estadoReserva: 'PEN',
+          observaciones: form.observaciones || '',
+          habitaciones: [{ idHabitacion: Number(room.idHabitacion ?? room.id) }]
+        };
+
+        activeReserva = await reservasApi.createReserva(payload);
       }
 
-      // 2. Simular Pago
-      const result = await paymentApi.simularPago(reserva.idReserva || reserva.id, reserva.totalReserva || reserva.total, isPublic);
-      
+      const idReserva = activeReserva.idReserva || activeReserva.id;
+      const total = activeReserva.totalReserva || activeReserva.total;
+
+      // 3. Generar Factura
+      try {
+        await paymentApi.generarFactura(idReserva);
+      } catch (err) {
+        console.warn("Invoice might already exist or failed, continuing...", err);
+      }
+
+      // 4. Procesar Pago
+      const result = await paymentApi.simularPago(idReserva, total, isPublic);
       const isApproved = result.estadoPago === 'APR' || result.EstadoPago === 'APR';
 
       if (isApproved) {
-        // 3. Si el pago es exitoso, actualizamos el estado de la reserva
-        // El simulador del backend ya podría hacerlo, pero nos aseguramos o refrescamos
         setStatus('success');
         setTimeout(() => {
           onSuccess && onSuccess(result);
@@ -54,12 +80,12 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         }, 2000);
       } else {
         setStatus('error');
-        setErrorMessage(result.mensaje || 'El pago fue rechazado por la pasarela.');
+        setErrorMessage(result.mensaje || 'Pago rechazado por la pasarela.');
       }
     } catch (err) {
-      console.error("Payment error:", err);
+      console.error("Payment Flow Error:", err);
       setStatus('error');
-      setErrorMessage(err.response?.data?.message || 'Ocurrió un error al procesar el pago.');
+      setErrorMessage(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -83,14 +109,14 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
           </div>
         ) : (
           <form onSubmit={handlePayment} className="payment-form">
-            <div className="reserva-summary">
+            <div className="reserva-summary dark:bg-slate-800 dark:border-slate-700">
               <div className="summary-item">
-                <span>Reserva ID:</span>
-                <strong>#{reserva.idReserva || reserva.id}</strong>
+                <span className="dark:text-slate-400">Estado de Reserva:</span>
+                <strong className="dark:text-white">#{reserva.idReserva || reserva.id || 'Nuevo Registro'}</strong>
               </div>
               <div className="summary-item">
-                <span>Total a Pagar:</span>
-                <strong className="total-amount">${reserva.totalReserva || reserva.total}</strong>
+                <span className="dark:text-slate-400">Total a Pagar:</span>
+                <strong className="total-amount dark:text-indigo-400">${reserva.totalReserva || reserva.total || reserva.reservaPayload?.totals?.total}</strong>
               </div>
             </div>
 
@@ -151,8 +177,7 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
             </div>
 
             {status === 'error' && (
-              <div className="error-alert">
-                {errorMessage}
+              <div className="error-alert" dangerouslySetInnerHTML={{ __html: errorMessage }}>
               </div>
             )}
 
@@ -172,6 +197,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
           padding: 1rem;
           color: #333;
         }
+        :global(.dark) .payment-container {
+          color: #f8fafc;
+        }
         .payment-status {
           text-align: center;
           padding: 2rem 0;
@@ -184,10 +212,14 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
           width: 50px;
           height: 50px;
           border: 5px solid #f3f3f3;
-          border-top: 5px solid #3498db;
+          border-top: 5px solid #4f46e5;
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin: 0 auto 1.5rem;
+        }
+        :global(.dark) .spinner {
+          border: 5px solid #334155;
+          border-top: 5px solid #6366f1;
         }
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -196,9 +228,13 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         .reserva-summary {
           background: #f8f9fa;
           padding: 1rem;
-          border-radius: 8px;
+          border-radius: 12px;
           margin-bottom: 1.5rem;
-          border-left: 4px solid #2ecc71;
+          border: 1px solid #e2e8f0;
+        }
+        :global(.dark) .reserva-summary {
+          background: #1e293b;
+          border-color: #334155;
         }
         .summary-item {
           display: flex;
@@ -207,7 +243,11 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         }
         .total-amount {
           font-size: 1.25rem;
-          color: #2c3e50;
+          color: #4f46e5;
+          font-weight: 800;
+        }
+        :global(.dark) .total-amount {
+          color: #818cf8;
         }
         .payment-form {
           display: flex;
@@ -225,52 +265,70 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
           gap: 0.4rem;
         }
         .form-group label {
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-weight: 600;
-          color: #666;
+          color: #64748b;
+        }
+        :global(.dark) .form-group label {
+          color: #94a3b8;
         }
         .payment-input {
           padding: 0.8rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
           font-size: 1rem;
-          transition: border-color 0.2s;
+          transition: all 0.2s;
+          background: white;
+        }
+        :global(.dark) .payment-input {
+          background: #0f172a;
+          border-color: #334155;
+          color: white;
         }
         .payment-input:focus {
-          border-color: #3498db;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
           outline: none;
         }
         .pay-button {
-          background: #2ecc71;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 1rem;
-          border-radius: 6px;
+          border-radius: 8px;
           font-size: 1.1rem;
           font-weight: 700;
           cursor: pointer;
-          transition: background 0.2s;
+          transition: all 0.2s;
           margin-top: 0.5rem;
         }
         .pay-button:hover {
-          background: #27ae60;
+          background: #4338ca;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .pay-button:disabled {
-          background: #bdc3c7;
+          background: #94a3b8;
           cursor: not-allowed;
+          transform: none;
         }
         .error-alert {
-          background: #ffebee;
-          color: #c62828;
+          background: #fef2f2;
+          color: #b91c1c;
           padding: 0.8rem;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          border: 1px solid #ffcdd2;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          border: 1px solid #fecaca;
+        }
+        :global(.dark) .error-alert {
+          background: rgba(127, 29, 29, 0.2);
+          color: #fca5a5;
+          border-color: #7f1d1d;
         }
         .payment-note {
           text-align: center;
-          font-size: 0.8rem;
-          color: #888;
+          font-size: 0.75rem;
+          color: #94a3b8;
           margin-top: 1rem;
         }
       `}</style>

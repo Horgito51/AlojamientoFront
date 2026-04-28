@@ -87,7 +87,13 @@ const MarketplacePage = () => {
     const fetchRooms = async () => {
       setLoading(true)
       try {
-        const data = await reservationService.getHabitaciones()
+        const params = {}
+        if (dates.checkIn && dates.checkOut) {
+          params.fechaInicio = dates.checkIn
+          params.fechaFin = dates.checkOut
+        }
+        
+        const data = await reservationService.getHabitaciones(params)
         if (alive) setRooms(data)
       } catch (err) {
         console.error('Rooms error:', err?.response?.data || err)
@@ -102,7 +108,7 @@ const MarketplacePage = () => {
     return () => {
       alive = false
     }
-  }, [])
+  }, [dates.checkIn, dates.checkOut])
 
   const handleToggleRoom = (room) => {
     setSelectedRooms((prev) => {

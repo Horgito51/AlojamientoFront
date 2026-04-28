@@ -51,41 +51,22 @@ export default function ReservationPage() {
     setManualRoom((current) => ({ ...current, [name]: value }))
   }
 
-  const submit = async (event) => {
+  const submit = (event) => {
     event.preventDefault()
-    setStatus({ type: '', message: '' })
-
+    
     if (!getRoomId(room)) {
-      setStatus({ type: 'error', message: 'Selecciona una habitacion desde el catalogo o ingresa el ID manualmente.' })
+      setStatus({ type: 'error', message: 'Selecciona una habitación desde el catálogo.' })
       return
     }
 
-    setSaving(true)
-    try {
-      const cliente = await reservasApi.createCliente(buildClientePayload(form))
-      const clienteId = cliente.idCliente ?? cliente.IdCliente ?? cliente.id
-      const reserva = await reservasApi.createReserva(buildReservaPayload({ clienteId, room, form, totals }))
-      
-      setCreatedReserva(reserva)
-      setStatus({
-        type: 'success',
-        message: `Reserva creada. Redirigiendo al pago...`,
-      })
-      
-      // Abrir modal de pago automáticamente
-      setTimeout(() => {
-        setShowPayment(true)
-      }, 1500)
-
-      setForm(initialForm)
-    } catch (error) {
-      setStatus({
-        type: 'error',
-        message: error.response?.data?.message || error.response?.data?.error || 'No se pudo enviar la reserva. Revisa los datos y el backend.',
-      })
-    } finally {
-      setSaving(false)
+    // Guardar los datos preparados para la creación en el modal de pago
+    const pendingData = {
+      clientePayload: buildClientePayload(form),
+      reservaPayload: { room, form, totals }
     }
+    
+    setCreatedReserva(pendingData) // Reusamos el estado para pasar los datos pendientes
+    setShowPayment(true)
   }
 
   const handlePaymentSuccess = () => {
