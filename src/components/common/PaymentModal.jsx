@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { paymentApi } from '../../api/paymentApi';
 import { reservasApi } from '../../api/reservasApi';
+import { reservationService } from '../../api/reservationService';
 import { getErrorMessage } from '../../utils/sweetAlert';
 
 const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) => {
@@ -65,15 +66,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       let activeReserva = reserva;
 
       if (reserva.clientePayload && reserva.reservaPayload) {
-        // a. Crear Cliente
-        const cliente = await reservasApi.createCliente(reserva.clientePayload);
-        const clienteId = cliente.idCliente ?? cliente.id;
-
-        // b. Crear Reserva
         const { room, form, totals } = reserva.reservaPayload;
         const payload = {
-          idCliente: Number(clienteId),
-          idSucursal: Number(room.idSucursal ?? 1),
+          idSucursal: Number(room.idSucursal ?? room.IdSucursal ?? room.sucursalId ?? 1),
           fechaInicio: new Date(`${form.fechaInicio}T12:00:00`).toISOString(),
           fechaFin: new Date(`${form.fechaFin}T12:00:00`).toISOString(),
           subtotalReserva: totals.subtotal,
@@ -84,10 +79,24 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
           origenCanalReserva: 'WEB',
           estadoReserva: 'PEN',
           observaciones: form.observaciones || '',
-          habitaciones: [{ idHabitacion: Number(room.idHabitacion ?? room.id) }]
+          habitaciones: [{ idHabitacion: Number(room.idHabitacion ?? room.IdHabitacion ?? room.id) }]
         };
 
-        activeReserva = await reservasApi.createReserva(payload);
+        const createCliente = async (payload) => {
+          return isPublic ? reservationService.createCliente(payload) : reservasApi.createCliente(payload);
+        };
+
+        const createReserva = async (payload) => {
+          return isPublic ? reservationService.createPublicReserva(payload) : reservasApi.createReserva(payload);
+        };
+
+        // a. Crear Cliente
+        const cliente = await createCliente(reserva.clientePayload);
+        const clienteId = cliente.idCliente ?? cliente.id;
+
+        // b. Crear Reserva
+        payload.idCliente = Number(clienteId);
+        activeReserva = await createReserva(payload);
       }
 
       const idReserva = activeReserva?.IdReserva ?? activeReserva?.idReserva ?? activeReserva?.id ?? activeReserva?.Id;
