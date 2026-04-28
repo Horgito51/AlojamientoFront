@@ -1,26 +1,32 @@
-import React from 'react';
-import { APP_CONFIG } from '../../config/appConfig';
+﻿import React from 'react'
+import { APP_CONFIG } from '../../config/appConfig'
 
-const money = (value) => Number((Number(value) || 0).toFixed(2));
+const money = (value) => Number((Number(value) || 0).toFixed(2))
+const getAppliedPrice = (room) => Number(room.precioNocheAplicado ?? room.PrecioNocheAplicado ?? room.precioBase ?? 0)
 
 const ReservationSummary = ({ selectedRooms, nights, onConfirm, loading, totals, confirmLabel = 'Confirmar Reserva' }) => {
-  const subtotal = totals?.subtotal ?? money(selectedRooms.reduce((acc, room) => acc + (Number(room.precioBase) || 0) * nights, 0));
-  const iva = totals?.iva ?? money(subtotal * APP_CONFIG.IVA_PERCENTAGE);
-  const total = totals?.total ?? money(subtotal + iva);
+  const subtotal = totals?.subtotal ?? money(selectedRooms.reduce((acc, room) => acc + getAppliedPrice(room) * nights, 0))
+  const iva = totals?.iva ?? money(subtotal * APP_CONFIG.IVA_PERCENTAGE)
+  const total = totals?.total ?? money(subtotal + iva)
 
-  if (selectedRooms.length === 0) return null;
+  if (selectedRooms.length === 0) return null
 
   return (
     <div className="sticky top-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900">
       <h2 className="mb-6 text-xl font-bold text-slate-900 dark:text-white">Resumen de Reserva</h2>
-      
+
       <div className="space-y-4">
         <div className="max-h-60 overflow-y-auto pr-2">
-          {selectedRooms.map(room => (
-            <div key={room.habitacionGuid} className="mb-3 flex items-center justify-between text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-300">Habitación {room.numeroHabitacion}</span>
-              <span className="text-slate-500 dark:text-slate-400">
-                ${room.precioBase} x {nights} {nights === 1 ? 'noche' : 'noches'}
+          {selectedRooms.map((room) => (
+            <div key={room.habitacionGuid} className="mb-3 flex items-center justify-between gap-3 text-sm">
+              <div>
+                <span className="font-medium text-slate-700 dark:text-slate-300">Habitacion {room.numeroHabitacion}</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {room.origenPrecio === 'TARIFA' ? `Tarifa #${room.idTarifa}` : 'Precio base'}
+                </p>
+              </div>
+              <span className="shrink-0 text-slate-500 dark:text-slate-400">
+                ${getAppliedPrice(room).toFixed(2)} x {nights} {nights === 1 ? 'noche' : 'noches'}
               </span>
             </div>
           ))}
@@ -48,15 +54,15 @@ const ReservationSummary = ({ selectedRooms, nights, onConfirm, loading, totals,
           disabled={loading || selectedRooms.length === 0}
           className="mt-6 w-full rounded-xl bg-indigo-600 py-4 text-center font-bold text-white transition-all hover:bg-indigo-700 hover:shadow-indigo-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? 'Procesando...' : confirmLabel}
+          {loading ? 'Calculando precio...' : confirmLabel}
         </button>
-        
+
         <p className="mt-4 text-center text-xs text-slate-500">
-          Al confirmar, procederás al pago seguro para completar tu reserva.
+          Al confirmar, procederas al pago seguro para completar tu reserva.
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ReservationSummary;
+export default ReservationSummary

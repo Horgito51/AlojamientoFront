@@ -12,15 +12,18 @@ import PaymentModal from '../../components/marketplace/PaymentModal'
 const money = (value) => Number((Number(value) || 0).toFixed(2))
 const getRoomId = (room) => Number(room.idHabitacion ?? room.IdHabitacion ?? room.id ?? room.Id)
 const getRoomSucursalId = (room) => Number(room.idSucursal ?? room.IdSucursal ?? room.sucursalId ?? APP_CONFIG.DEFAULT_SUCURSAL_ID)
+const getAppliedPrice = (room) => Number(room.precioNocheAplicado ?? room.PrecioNocheAplicado ?? room.precioBase ?? 0)
 const toApiDate = (value) => `${value}T00:00:00`
 
 const MarketplacePage = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, auth } = useAuth()
+  const user = auth?.user ?? auth ?? {}
   const [rooms, setRooms] = useState([])
   const [selectedRooms, setSelectedRooms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [pricingLoading, setPricingLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [observaciones, setObservaciones] = useState('')
   const [error, setError] = useState(null)
@@ -72,8 +75,65 @@ const MarketplacePage = () => {
     return diffDays > 0 ? diffDays : 0
   }, [dates])
 
+  const selectedRoomKeys = useMemo(
+    () => selectedRooms.map((room) => room.habitacionGuid).filter(Boolean).join('|'),
+    [selectedRooms]
+  )
+
+  useEffect(() => {
+    if (!dates.checkIn || !dates.checkOut || selectedRooms.length === 0) return
+
+    let alive = true
+    const fechaInicio = toApiDate(dates.checkIn)
+    const fechaFin = toApiDate(dates.checkOut)
+
+    const fetchAppliedPrices = async () => {
+      setPricingLoading(true)
+      try {
+        const pricedRooms = await Promise.all(
+          selectedRooms.map(async (room) => {
+            if (!room.habitacionGuid) return room
+
+            const price = await reservationService.calculatePublicRoomPrice({
+              habitacionGuid: room.habitacionGuid,
+              fechaInicio,
+              fechaFin,
+              canal: APP_CONFIG.CANAL_RESERVA,
+            })
+
+            return {
+              ...room,
+              idHabitacion: price.idHabitacion ?? price.IdHabitacion ?? room.idHabitacion,
+              idSucursal: price.idSucursal ?? price.IdSucursal ?? room.idSucursal,
+              idTarifa: price.idTarifa ?? price.IdTarifa ?? null,
+              precioNocheAplicado: money(price.precioNocheAplicado ?? price.PrecioNocheAplicado ?? room.precioBase),
+              subtotalLinea: money(price.subtotalLinea ?? price.SubtotalLinea ?? 0),
+              valorIvaLinea: money(price.valorIvaLinea ?? price.ValorIvaLinea ?? 0),
+              totalLinea: money(price.totalLinea ?? price.TotalLinea ?? 0),
+              origenPrecio: price.origenPrecio ?? price.OrigenPrecio ?? 'PRECIO_BASE',
+            }
+          })
+        )
+
+        if (alive) setSelectedRooms(pricedRooms)
+      } catch (err) {
+        console.error('Pricing error:', err?.response?.data || err)
+        if (alive) showError('Error', 'No se pudo calcular el precio aplicado para la reserva.')
+      } finally {
+        if (alive) setPricingLoading(false)
+      }
+    }
+
+    fetchAppliedPrices()
+
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dates.checkIn, dates.checkOut, selectedRoomKeys])
+
   const totals = useMemo(() => {
-    const subtotal = money(selectedRooms.reduce((acc, room) => acc + (Number(room.precioBase) || 0) * nights, 0))
+    const subtotal = money(selectedRooms.reduce((acc, room) => acc + getAppliedPrice(room) * nights, 0))
     const iva = money(subtotal * APP_CONFIG.IVA_PERCENTAGE)
     const total = money(subtotal + iva)
     return { subtotal, iva, total, pending: total }
@@ -144,17 +204,18 @@ const MarketplacePage = () => {
       observaciones: observaciones.trim(),
       esWalkin: false,
       habitaciones: selectedRooms.map((room) => {
-        const subtotalLinea = money((Number(room.precioBase) || 0) * nights)
-        const valorIvaLinea = money(subtotalLinea * APP_CONFIG.IVA_PERCENTAGE)
+        const precioNocheAplicado = money(getAppliedPrice(room))
+        const subtotalLinea = money(precioNocheAplicado * nights)
+        const valorIvaLinea = money(room.valorIvaLinea ?? subtotalLinea * APP_CONFIG.IVA_PERCENTAGE)
 
         return {
           idHabitacion: getRoomId(room),
-          idTarifa: null,
+          idTarifa: room.idTarifa ?? null,
           fechaInicio,
           fechaFin,
           numAdultos: 1,
           numNinos: 0,
-          precioNocheAplicado: money(room.precioBase),
+          precioNocheAplicado,
           subtotalLinea,
           valorIvaLinea,
           descuentoLinea: 0,
@@ -177,6 +238,11 @@ const MarketplacePage = () => {
     }
 
     const payload = buildReservaPayload()
+    const hasUnpricedRooms = payload.habitaciones.some((room) => !Number(room.precioNocheAplicado))
+    if (pricingLoading || hasUnpricedRooms) {
+      showError('Error', 'Espera a que se calcule el precio aplicado antes de confirmar.')
+      return
+    }
     setPendingPayload(payload)
     setShowPaymentModal(true)
   }
@@ -273,7 +339,7 @@ const MarketplacePage = () => {
               selectedRooms={selectedRooms}
               nights={nights}
               totals={totals}
-              loading={false}
+              loading={pricingLoading}
               onConfirm={handleContinueToReservation}
               confirmLabel={showConfirm ? 'Actualizar seleccion' : 'Continuar'}
             />

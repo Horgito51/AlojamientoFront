@@ -2,7 +2,7 @@ import api from './axiosConfig';
 import { ENDPOINTS } from './endpoints';
 import { normalizeEntity, normalizeList } from './normalize';
 
-const isMissingPublicEndpoint = (error) => [404, 405].includes(error.response?.status);
+const isMissingPublicEndpoint = (error) => [400, 404, 405].includes(error.response?.status);
 const normalizeEmail = (value) => value?.trim().toLowerCase();
 
 export const reservationService = {
@@ -80,6 +80,11 @@ export const reservationService = {
     }
   },
 
+  async calculatePublicRoomPrice(priceData) {
+    const { data } = await api.post(ENDPOINTS.PUBLIC.RESERVAS.calcularPrecio, priceData);
+    return normalizeEntity(data);
+  },
+
   async getMisReservas(params = {}) {
     try {
       const { data } = await api.get(ENDPOINTS.PUBLIC.RESERVAS.base, { params });
@@ -91,7 +96,17 @@ export const reservationService = {
   },
 
   async simulatePayment(paymentData) {
-    const { data, status } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
+    try {
+      const { data, status } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
+      if ((data === undefined || data === null || data === '') && status >= 200 && status < 300) {
+        return { success: true, estadoPago: 'OK' };
+      }
+      return normalizeEntity(data);
+    } catch (error) {
+      if (!isMissingPublicEndpoint(error)) throw error;
+    }
+
+    const { data, status } = await api.post(ENDPOINTS.INTERNAL.PAGOS.simular, paymentData);
     if ((data === undefined || data === null || data === '') && status >= 200 && status < 300) {
       return { success: true, estadoPago: 'OK' };
     }

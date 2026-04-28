@@ -134,19 +134,23 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       // 1. Crear la reserva PRIMERO para obtener un ID real
       const createdReserva = unwrapEntity(await reservationService.createPublicReserva(reservationData))
       
-      // Intentar obtener ID en varios formatos (PascalCase, camelCase)
+      const createdReservaGuid = pickValue(createdReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva'])
       createdReservaId = pickValue(createdReserva, ['IdReserva', 'idReserva', 'id', 'Id'])
       const reservaTotal = pickValue(createdReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? total
 
-      if (!createdReservaId) {
+      if (!createdReservaId && !createdReservaGuid) {
         throw new Error('No se pudo obtener el identificador de la reserva. Por favor, contacta a soporte.')
       }
 
       // 2. Simular el pago con el ID real
-      const paymentResult = await reservationService.simulatePayment({
+      const paymentPayload = createdReservaGuid ? {
+        reservaGuid: createdReservaGuid,
+        monto: Number(reservaTotal || 0),
+      } : {
         idReserva: Number(createdReservaId),
         monto: Number(reservaTotal || 0),
-      })
+      }
+      const paymentResult = await reservationService.simulatePayment(paymentPayload)
 
       if (!isPaymentApproved(paymentResult)) {
         // 3. Si el pago falla, CANCELAMOS la reserva creada (Rollback atómico)

@@ -60,6 +60,7 @@ export const ENDPOINTS = {
     // ---- Reservas ----
     RESERVAS: {
       base: `api/${API_VERSION}/internal/reservas`,
+      calcularPrecio: `api/${API_VERSION}/internal/reservas/calcular-precio`,
       byId: (id) => `api/${API_VERSION}/internal/reservas/${id}`,
       confirmar: (id) => `api/${API_VERSION}/internal/reservas/${id}/confirmar`,
       cancelar: (id) => `api/${API_VERSION}/internal/reservas/${id}/cancelar`,
@@ -116,6 +117,7 @@ export const ENDPOINTS = {
     },
     RESERVAS: {
       base: `api/v1/public/reservas`,
+      calcularPrecio: `api/v1/public/reservas/calcular-precio`,
     },
     PAGOS: {
       simular: `api/v1/public/pagos/simular`,
