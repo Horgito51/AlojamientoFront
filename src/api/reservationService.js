@@ -80,6 +80,16 @@ export const reservationService = {
     }
   },
 
+  async getMisReservas(params = {}) {
+    try {
+      const { data } = await api.get(ENDPOINTS.PUBLIC.RESERVAS.base, { params });
+      return data;
+    } catch (error) {
+      console.error('Error fetching mis reservas:', error);
+      throw error;
+    }
+  },
+
   async simulatePayment(paymentData) {
     const { data } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
     return normalizeEntity(data);

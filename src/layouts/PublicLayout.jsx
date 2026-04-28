@@ -40,6 +40,7 @@ export default function PublicLayout() {
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
             <Link className="hover:text-indigo-600 transition-colors" to="/habitaciones">Habitaciones</Link>
             <Link className="hover:text-indigo-600 transition-colors" to="/reserva">Reservar</Link>
+            {loggedIn && <Link className="hover:text-indigo-600 transition-colors" to="/mis-reservas">Mis Reservas</Link>}
             {isAdmin && <Link className="font-bold text-indigo-600 dark:text-indigo-400" to="/admin">Admin</Link>}
             <a href="/#sobre-nosotros" className="hover:text-indigo-600 transition-colors">Sobre Nosotros</a>
           </nav>

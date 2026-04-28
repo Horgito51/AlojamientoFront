@@ -6,6 +6,7 @@ import Login from './components/Login'
 import Register from './components/Register'
 import PublicHome from './pages/public/PublicHome'
 import MarketplacePage from './pages/marketplace/MarketplacePage'
+import MisReservasPage from './pages/public/MisReservasPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminModuleRoute from './pages/admin/AdminModuleRoute'
 import AdminModuleFormPage from './pages/admin/AdminModuleFormPage'
@@ -18,6 +19,7 @@ function App() {
         <Route index element={<PublicHome />} />
         <Route path="habitaciones" element={<MarketplacePage />} />
         <Route path="reserva" element={<MarketplacePage />} />
+        <Route path="mis-reservas" element={<MisReservasPage />} />
       </Route>
 
       <Route path="login" element={<Login />} />
