@@ -11,10 +11,13 @@ export const paymentApi = {
    */
   async simularPago(idReserva, monto, isPublic = true) {
     const url = isPublic ? ENDPOINTS.PUBLIC.PAGOS.simular : ENDPOINTS.INTERNAL.PAGOS.simular;
-    const { data } = await api.post(url, {
+    const { data, status } = await api.post(url, {
       idReserva,
       monto
     });
+    if ((data === undefined || data === null || data === '') && status >= 200 && status < 300) {
+      return { success: true, estadoPago: 'OK' };
+    }
     return normalizeEntity(data);
   },
 

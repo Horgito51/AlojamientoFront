@@ -14,6 +14,29 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   const [status, setStatus] = useState('idle') 
   const [error, setError] = useState('')
 
+  const unwrapEntity = (value) => {
+    let current = value
+    const keys = ['data', 'result', 'reserva', 'Reserva', 'pago', 'Pago', 'payment', 'Payment', 'entity', 'item']
+
+    for (let i = 0; i < 6; i += 1) {
+      if (!current || typeof current !== 'object') return current
+      const nextKey = keys.find((key) => current[key] && typeof current[key] === 'object')
+      if (!nextKey) return current
+      current = current[nextKey]
+    }
+
+    return current
+  }
+
+  const pickValue = (source, keys) => {
+    const entity = unwrapEntity(source)
+    for (const key of keys) {
+      const value = entity?.[key] ?? source?.[key]
+      if (value !== undefined && value !== null && value !== '') return value
+    }
+    return null
+  }
+
   const update = (event) => {
     let { name, value } = event.target
     
@@ -38,26 +61,44 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   }
 
   const getPaymentStatus = (paymentResult) => {
+    const payment = unwrapEntity(paymentResult)
     const value = String(
-      paymentResult?.estadoPago ||
-      paymentResult?.EstadoPago ||
-      paymentResult?.estado ||
-      paymentResult?.Estado ||
-      paymentResult?.status ||
-      paymentResult?.Status ||
+      payment?.estadoPago ||
+      payment?.EstadoPago ||
+      payment?.estado ||
+      payment?.Estado ||
+      payment?.status ||
+      payment?.Status ||
       ''
     ).toUpperCase()
     return value
   }
 
   const isPaymentApproved = (paymentResult) => {
+    const payment = unwrapEntity(paymentResult)
     const paymentStatus = getPaymentStatus(paymentResult)
+    const rejectedStatuses = ['RECH', 'RECHAZADO', 'DEN', 'DENIED', 'FAILED', 'FAIL', 'ERROR', 'ERR', 'CAN', 'CANCELADO']
+    const hasPaymentEvidence = Boolean(
+      pickValue(payment, ['idPago', 'IdPago', 'idPayment', 'IdPayment', 'codigoAutorizacion', 'CodigoAutorizacion', 'transaccionExterna', 'TransaccionExterna', 'referencia', 'Referencia'])
+    )
+
+    if (
+      rejectedStatuses.includes(paymentStatus) ||
+      payment?.success === false ||
+      payment?.Success === false ||
+      payment?.aprobado === false ||
+      payment?.Aprobado === false
+    ) {
+      return false
+    }
+
     return (
       ['APR', 'CON', 'PAG', 'OK', 'PAID', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO'].includes(paymentStatus) ||
-      paymentResult?.success === true ||
-      paymentResult?.Success === true ||
-      paymentResult?.aprobado === true ||
-      paymentResult?.Aprobado === true
+      payment?.success === true ||
+      payment?.Success === true ||
+      payment?.aprobado === true ||
+      payment?.Aprobado === true ||
+      hasPaymentEvidence
     )
   }
 
@@ -91,11 +132,11 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
     
     try {
       // 1. Crear la reserva PRIMERO para obtener un ID real
-      const createdReserva = await reservationService.createPublicReserva(reservationData)
+      const createdReserva = unwrapEntity(await reservationService.createPublicReserva(reservationData))
       
       // Intentar obtener ID en varios formatos (PascalCase, camelCase)
-      createdReservaId = createdReserva?.IdReserva ?? createdReserva?.idReserva ?? createdReserva?.id ?? createdReserva?.Id
-      const reservaTotal = createdReserva?.TotalReserva ?? createdReserva?.totalReserva ?? total
+      createdReservaId = pickValue(createdReserva, ['IdReserva', 'idReserva', 'id', 'Id'])
+      const reservaTotal = pickValue(createdReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? total
 
       if (!createdReservaId) {
         throw new Error('No se pudo obtener el identificador de la reserva. Por favor, contacta a soporte.')
@@ -123,8 +164,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       // 4. Éxito total
       setStatus('success')
       setTimeout(() => {
-        onSuccess(createdReserva)
         onClose()
+        onSuccess(createdReserva)
       }, 1500)
 
     } catch (err) {

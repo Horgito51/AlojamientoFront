@@ -91,7 +91,10 @@ export const reservationService = {
   },
 
   async simulatePayment(paymentData) {
-    const { data } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
+    const { data, status } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
+    if ((data === undefined || data === null || data === '') && status >= 200 && status < 300) {
+      return { success: true, estadoPago: 'OK' };
+    }
     return normalizeEntity(data);
   },
 

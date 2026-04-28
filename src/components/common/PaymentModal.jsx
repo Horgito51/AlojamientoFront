@@ -18,6 +18,29 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
 
   if (!reserva) return null;
 
+  const unwrapEntity = (value) => {
+    let current = value
+    const keys = ['data', 'result', 'reserva', 'Reserva', 'pago', 'Pago', 'payment', 'Payment', 'entity', 'item']
+
+    for (let i = 0; i < 6; i += 1) {
+      if (!current || typeof current !== 'object') return current
+      const nextKey = keys.find((key) => current[key] && typeof current[key] === 'object')
+      if (!nextKey) return current
+      current = current[nextKey]
+    }
+
+    return current
+  }
+
+  const pickValue = (source, keys) => {
+    const entity = unwrapEntity(source)
+    for (const key of keys) {
+      const value = entity?.[key] ?? source?.[key]
+      if (value !== undefined && value !== null && value !== '') return value
+    }
+    return null
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let nextValue = value;
@@ -31,26 +54,44 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
   };
 
   const getPaymentStatus = (paymentResult) => {
+    const payment = unwrapEntity(paymentResult)
     const value = String(
-      paymentResult?.estadoPago ||
-      paymentResult?.EstadoPago ||
-      paymentResult?.estado ||
-      paymentResult?.Estado ||
-      paymentResult?.status ||
-      paymentResult?.Status ||
+      payment?.estadoPago ||
+      payment?.EstadoPago ||
+      payment?.estado ||
+      payment?.Estado ||
+      payment?.status ||
+      payment?.Status ||
       ''
     ).toUpperCase()
     return value
   }
 
   const isPaymentApproved = (paymentResult) => {
+    const payment = unwrapEntity(paymentResult)
     const paymentStatus = getPaymentStatus(paymentResult)
+    const rejectedStatuses = ['RECH', 'RECHAZADO', 'DEN', 'DENIED', 'FAILED', 'FAIL', 'ERROR', 'ERR', 'CAN', 'CANCELADO']
+    const hasPaymentEvidence = Boolean(
+      pickValue(payment, ['idPago', 'IdPago', 'idPayment', 'IdPayment', 'codigoAutorizacion', 'CodigoAutorizacion', 'transaccionExterna', 'TransaccionExterna', 'referencia', 'Referencia'])
+    )
+
+    if (
+      rejectedStatuses.includes(paymentStatus) ||
+      payment?.success === false ||
+      payment?.Success === false ||
+      payment?.aprobado === false ||
+      payment?.Aprobado === false
+    ) {
+      return false
+    }
+
     return (
       ['APR', 'CON', 'PAG', 'OK', 'PAID', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO'].includes(paymentStatus) ||
-      paymentResult?.success === true ||
-      paymentResult?.Success === true ||
-      paymentResult?.aprobado === true ||
-      paymentResult?.Aprobado === true
+      payment?.success === true ||
+      payment?.Success === true ||
+      payment?.aprobado === true ||
+      payment?.Aprobado === true ||
+      hasPaymentEvidence
     )
   }
 
@@ -115,16 +156,19 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         };
 
         // a. Crear Cliente
-        const cliente = await createCliente(reserva.clientePayload);
-        const clienteId = cliente.idCliente ?? cliente.id;
+        const cliente = unwrapEntity(await createCliente(reserva.clientePayload));
+        const clienteId = pickValue(cliente, ['IdCliente', 'idCliente', 'id', 'Id']);
 
         // b. Crear Reserva
+        if (!clienteId) {
+          throw new Error('No se pudo obtener el identificador del cliente.');
+        }
         payload.idCliente = Number(clienteId);
-        activeReserva = await createReserva(payload);
+        activeReserva = unwrapEntity(await createReserva(payload));
       }
 
-      const idReserva = activeReserva?.IdReserva ?? activeReserva?.idReserva ?? activeReserva?.id ?? activeReserva?.Id;
-      const totalToPay = activeReserva?.TotalReserva ?? activeReserva?.totalReserva ?? activeReserva?.total ?? activeReserva?.Total;
+      const idReserva = pickValue(activeReserva, ['IdReserva', 'idReserva', 'id', 'Id']);
+      const totalToPay = pickValue(activeReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? reserva.reservaPayload?.totals?.total;
 
       if (!idReserva || !Number(totalToPay)) {
         throw new Error('No se pudo obtener la reserva o el total a pagar.');
@@ -159,8 +203,8 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       // 5. Todo listo
       setStatus('success');
       setTimeout(() => {
-        onSuccess && onSuccess(activeReserva);
         onClose();
+        onSuccess && onSuccess(activeReserva);
       }, 2000);
 
     } catch (err) {
