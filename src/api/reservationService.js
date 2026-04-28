@@ -78,5 +78,10 @@ export const reservationService = {
       const { data } = await api.post(ENDPOINTS.INTERNAL.RESERVAS.base, reservationData);
       return normalizeEntity(data);
     }
+  },
+
+  async simulatePayment(paymentData) {
+    const { data } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
+    return normalizeEntity(data);
   }
 };

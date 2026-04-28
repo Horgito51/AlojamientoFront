@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { buildClientePayload, buildReservationTotals, buildReservaPayload, reservasApi } from '../../api/reservasApi'
+import PaymentModal from '../../components/common/PaymentModal'
 
 const initialForm = {
   tipoIdentificacion: 'CED',
@@ -31,6 +32,8 @@ export default function ReservationPage() {
   })
   const [status, setStatus] = useState({ type: '', message: '' })
   const [saving, setSaving] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+  const [createdReserva, setCreatedReserva] = useState(null)
 
   const room = selectedRoom || manualRoom
   const totals = useMemo(
@@ -62,10 +65,18 @@ export default function ReservationPage() {
       const cliente = await reservasApi.createCliente(buildClientePayload(form))
       const clienteId = cliente.idCliente ?? cliente.IdCliente ?? cliente.id
       const reserva = await reservasApi.createReserva(buildReservaPayload({ clienteId, room, form, totals }))
+      
+      setCreatedReserva(reserva)
       setStatus({
         type: 'success',
-        message: `Reserva enviada correctamente. Codigo interno: ${reserva.idReserva ?? reserva.IdReserva ?? 'pendiente'}.`,
+        message: `Reserva creada. Redirigiendo al pago...`,
       })
+      
+      // Abrir modal de pago automáticamente
+      setTimeout(() => {
+        setShowPayment(true)
+      }, 1500)
+
       setForm(initialForm)
     } catch (error) {
       setStatus({
@@ -76,6 +87,14 @@ export default function ReservationPage() {
       setSaving(false)
     }
   }
+
+  const handlePaymentSuccess = () => {
+    setStatus({
+      type: 'success',
+      message: '¡Reserva completada y pagada con éxito!',
+    })
+  }
+
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -148,6 +167,14 @@ export default function ReservationPage() {
           )}
         </aside>
       </div>
+
+      <PaymentModal 
+        isOpen={showPayment} 
+        onClose={() => setShowPayment(false)} 
+        reserva={createdReserva} 
+        onSuccess={handlePaymentSuccess}
+        isPublic={true}
+      />
     </main>
   )
 }

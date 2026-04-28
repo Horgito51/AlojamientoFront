@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { bookingApi } from '../../api/bookingApi'
 import RoomCard from '../../components/common/RoomCard'
+import { useAuth } from '../../hooks/useAuth'
 
 const fallbackRooms = [
   {
@@ -34,6 +35,8 @@ const fallbackRooms = [
 ]
 
 export default function PublicHome() {
+  const navigate = useNavigate()
+  const { isAuthenticated, hasRole } = useAuth()
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
 

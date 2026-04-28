@@ -24,8 +24,21 @@ export const AuthProvider = ({ children }) => {
     return auth?.token ? true : false
   }, [auth])
 
+  const getUserRoles = useCallback(() => {
+    if (!auth?.roles) return []
+    // Manejar tanto array simple como objeto con $values de .NET
+    const roles = Array.isArray(auth.roles) ? auth.roles : auth.roles?.$values || []
+    return roles.map(r => String(r.nombreRol || r).toUpperCase())
+  }, [auth])
+
+  const hasRole = useCallback((roleName) => {
+    const roles = getUserRoles()
+    const search = String(roleName).toUpperCase()
+    return roles.includes(search)
+  }, [getUserRoles])
+
   return (
-    <AuthContext.Provider value={{ auth, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ auth, login, logout, isAuthenticated, hasRole, getUserRoles }}>
       {children}
     </AuthContext.Provider>
   )

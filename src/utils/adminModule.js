@@ -130,6 +130,7 @@ const ACTION_LABELS = {
   anularFactura: 'Anular',
   moderarValoracion: 'Moderar',
   responderValoracion: 'Responder',
+  ejecutarPago: 'Pagar',
 }
 
 const humanizeKey = (value = '') =>

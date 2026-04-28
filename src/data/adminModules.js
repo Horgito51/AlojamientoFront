@@ -329,7 +329,7 @@ export const adminModules = {
       }
       return p
     },
-    actions: ['confirmarReserva', 'cancelarReserva'],
+    actions: ['confirmarReserva', 'cancelarReserva', 'ejecutarPago'],
   },
   estadias: {
     title: 'Estadias',

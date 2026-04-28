@@ -5,10 +5,10 @@ export const ENDPOINTS = {
   // AUTENTICACIÓN
   // ==========================================
   AUTH: {
-    base: `api/${API_VERSION}/internal/auth`,
-    login: `api/${API_VERSION}/internal/auth/login`,
-    registerCliente: `api/${API_VERSION}/internal/auth/register-cliente`,
-    register: `api/${API_VERSION}/internal/auth/register`,
+    base: `api/${API_VERSION}/auth`,
+    login: `api/${API_VERSION}/auth/login`,
+    registerCliente: `api/${API_VERSION}/auth/register-cliente`,
+    register: `api/${API_VERSION}/auth/register`,
   },
 
   // ==========================================
@@ -87,10 +87,12 @@ export const ENDPOINTS = {
       base: `api/${API_VERSION}/internal/pagos`,
       byId: (id) => `api/${API_VERSION}/internal/pagos/${id}`,
       estado: (id) => `api/${API_VERSION}/internal/pagos/${id}/estado`,
+      simular: `api/${API_VERSION}/pagos/simular`,
     },
     FACTURAS: {
       base: `api/${API_VERSION}/internal/facturas`,
       byId: (id) => `api/${API_VERSION}/internal/facturas/${id}`,
+      generarReserva: (id) => `api/${API_VERSION}/internal/facturas/generar-reserva/${id}`,
     },
 
     // ---- Valoraciones ----
@@ -113,6 +115,9 @@ export const ENDPOINTS = {
     },
     RESERVAS: {
       base: `api/v1/public/reservas`,
+    },
+    PAGOS: {
+      simular: `api/v1/public/pagos/simular`,
     },
     TIPOS_HABITACION: `api/v1/public/tipos-habitacion`,
     SUCURSALES: `api/v1/public/sucursales`,

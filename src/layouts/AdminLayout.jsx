@@ -1,10 +1,10 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { adminNavigation } from '../data/adminModules'
-import { clearStoredSession, getStoredSession } from '../utils/auth'
+import { useAuth } from '../hooks/useAuth'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
-  const session = getStoredSession()
+  const { auth: session, logout: authLogout } = useAuth()
   const grouped = adminNavigation.reduce((acc, item) => {
     acc[item.group] ||= []
     acc[item.group].push(item)
@@ -12,7 +12,7 @@ export default function AdminLayout() {
   }, {})
 
   const logout = () => {
-    clearStoredSession()
+    authLogout()
     navigate('/login', { replace: true })
   }
 

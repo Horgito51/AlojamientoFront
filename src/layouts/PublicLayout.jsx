@@ -1,4 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 
 function ThemeButton() {
@@ -18,6 +19,9 @@ function ThemeButton() {
 
 export default function PublicLayout() {
   const navigate = useNavigate()
+  const { isAuthenticated, logout, hasRole } = useAuth()
+  const loggedIn = isAuthenticated()
+  const isAdmin = hasRole('ADMINISTRADOR') || hasRole('ADMIN') || hasRole('OPERATIVO') || hasRole('DESK_SERVICE')
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -32,21 +36,40 @@ export default function PublicLayout() {
               <span className="block text-xs text-slate-500 dark:text-slate-400">Hospedaje en Cuenca</span>
             </span>
           </Link>
-
+ 
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
             <Link className="hover:text-indigo-600" to="/habitaciones">Habitaciones</Link>
             <Link className="hover:text-indigo-600" to="/reserva">Reservar</Link>
+            {isAdmin && <Link className="font-bold text-indigo-600 dark:text-indigo-400" to="/admin">Admin</Link>}
             <button type="button" className="hover:text-indigo-600" onClick={() => navigate('/#contacto')}>Contacto</button>
           </nav>
 
           <div className="flex items-center gap-2">
             <ThemeButton />
-            <Link
-              to="/login"
-              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              Admin
-            </Link>
+            {!loggedIn ? (
+              <>
+                <Link
+                  to="/login"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  Iniciar sesion
+                </Link>
+                <Link
+                  to="/register"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  Registrarse
+                </Link>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                Salir
+              </button>
+            )}
             <Link
               to="/habitaciones"
               className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"

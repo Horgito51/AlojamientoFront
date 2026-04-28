@@ -6,6 +6,7 @@ import { ENDPOINTS } from '../../api/endpoints'
 import AdminDataTable from '../../components/admin/AdminDataTable'
 import { getActionLabel, getFieldLabel, getFieldValueLabel, getStatusTone, isStatusField, readValue, resolveId } from '../../utils/adminModule'
 import { confirmDelete, showError, showSuccess } from '../../utils/sweetAlert'
+import PaymentModal from '../../components/common/PaymentModal'
 
 const iconPaths = {
   view: 'M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12Zm9.75 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -16,6 +17,7 @@ const iconPaths = {
   exit: 'M4 4h10v16H4zM14 12h7m-3-3 3 3-3 3',
   shield: 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Zm-3 9 2 2 4-5',
   reply: 'M10 8H5v5m0 0 5 5M5 13h9a5 5 0 0 0 0-10h-1',
+  payment: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z',
 }
 
 function ActionIcon({ name }) {
@@ -34,6 +36,7 @@ const actionIconName = (action) => ({
   anularFactura: 'cancel',
   moderarValoracion: 'shield',
   responderValoracion: 'reply',
+  ejecutarPago: 'payment',
 })[action] || 'view'
 
 const asArray = (value) => {
@@ -95,6 +98,8 @@ export default function AdminModulePage() {
   const [error, setError] = useState('')
   const [invoiceDetail, setInvoiceDetail] = useState(null)
   const [loadingInvoiceDetail, setLoadingInvoiceDetail] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+  const [selectedReserva, setSelectedReserva] = useState(null)
 
   const columns = useMemo(() => module?.columns || [], [module])
 
@@ -189,6 +194,11 @@ export default function AdminModulePage() {
       if (action === 'anularFactura') await adminApi.patch(`${ENDPOINTS.INTERNAL.FACTURAS.byId(id)}/anular`, { motivo: 'Anulado desde panel administrativo' })
       if (action === 'moderarValoracion') await adminApi.patch(ENDPOINTS.INTERNAL.VALORACIONES.moderar(id), { nuevoEstado: 'APR', motivo: 'Aprobada desde panel administrativo' })
       if (action === 'responderValoracion') await adminApi.patch(ENDPOINTS.INTERNAL.VALORACIONES.responder(id), { respuesta: 'Gracias por compartir tu experiencia.' })
+      if (action === 'ejecutarPago') {
+        setSelectedReserva(row)
+        setShowPayment(true)
+        return // El modal se encarga del resto
+      }
       await load()
       await showSuccess('Accion ejecutada', 'La operacion se completo correctamente.')
     } catch {
@@ -294,6 +304,14 @@ export default function AdminModulePage() {
           }}
         />
       )}
+
+      <PaymentModal 
+        isOpen={showPayment} 
+        onClose={() => setShowPayment(false)} 
+        reserva={selectedReserva} 
+        onSuccess={load}
+        isPublic={false}
+      />
     </div>
   )
 }

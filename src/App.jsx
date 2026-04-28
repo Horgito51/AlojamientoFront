@@ -23,7 +23,7 @@ function App() {
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
 
-      <Route path="admin" element={<ProtectedRoute />}>
+      <Route path="admin" element={<ProtectedRoute allowedRoles={['ADMINISTRADOR', 'ADMIN', 'OPERATIVO', 'DESK_SERVICE']} />}>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           {/* Rutas específicas de reservas (formulario dedicado con cálculo automático) */}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import api from '../api/axiosConfig'
 import { ENDPOINTS } from '../api/endpoints'
 import { useTheme } from '../hooks/useTheme'
@@ -51,13 +51,22 @@ function ThemeToggle() {
 // ── Login principal ────────────────────────────────────────────────────────────
 export default function Login({ onLoginSuccess }) {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const location = useLocation()
+  const { isAuthenticated, login, hasRole } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      const isAdmin = hasRole('ADMINISTRADOR') || hasRole('ADMIN') || hasRole('OPERATIVO') || hasRole('DESK_SERVICE')
+      const destination = location.state?.from || (isAdmin ? '/admin' : '/habitaciones')
+      navigate(destination, { replace: true })
+    }
+  }, [isAuthenticated, hasRole, location.state, navigate])
 
   const validate = () => {
     const next = {}
@@ -101,18 +110,23 @@ export default function Login({ onLoginSuccess }) {
         }
       }
 
+      const isAdmin = authPayload.roles.some(r => {
+        const name = String(r.nombreRol || r).toUpperCase()
+        return ['ADMINISTRADOR', 'ADMIN', 'OPERATIVO', 'DESK_SERVICE'].includes(name)
+      })
+
       login(authPayload)
       onLoginSuccess?.(auth)
-      navigate('/admin', { replace: true })
+      
+      const destination = location.state?.from || (isAdmin ? '/admin' : '/habitaciones')
+      navigate(destination, { replace: true })
     } catch (err) {
-      const msg =
-        err.message === 'AUTH_TOKEN_MISSING'
-          ? 'El servidor respondio el login, pero no envio un token valido.'
-          : err.response?.data?.message ||
-        err.response?.data?.error ||
-        (err.response?.status === 401
-          ? 'Credenciales incorrectas. Verifica tu correo y contraseña.'
-          : 'No se pudo conectar con el servidor. Intenta de nuevo.')
+      console.error('Login error:', err)
+      const msg = err.response?.status === 401
+        ? 'Correo o contrasena incorrectos. Verifica tus datos.'
+        : err.request
+          ? 'No se pudo iniciar sesion en este momento. Intenta de nuevo.'
+          : 'No se pudo iniciar sesion. Intenta nuevamente.'
       setServerError(msg)
     } finally {
       setIsSubmitting(false)
