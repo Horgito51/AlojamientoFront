@@ -1,51 +1,32 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { bookingApi } from '../../api/bookingApi'
 import RoomCard from '../../components/common/RoomCard'
-import { useAuth } from '../../hooks/useAuth'
-
-const fallbackRooms = [
-  {
-    id: 1,
-    idHabitacion: 1,
-    idSucursal: 1,
-    nombreTipoHabitacion: 'Suite Premium',
-    descripcionHabitacion: 'Espacio amplio con cama king, desayuno incluido y vista a la ciudad.',
-    precioBase: 49,
-    capacidadHabitacion: 2,
-  },
-  {
-    id: 2,
-    idHabitacion: 2,
-    idSucursal: 1,
-    nombreTipoHabitacion: 'Familiar Deluxe',
-    descripcionHabitacion: 'Habitacion ideal para familias con wifi, aire acondicionado y sala compacta.',
-    precioBase: 39,
-    capacidadHabitacion: 4,
-  },
-  {
-    id: 3,
-    idHabitacion: 3,
-    idSucursal: 1,
-    nombreTipoHabitacion: 'Estandar Confort',
-    descripcionHabitacion: 'Comoda, funcional y perfecta para viajes de trabajo o escapadas cortas.',
-    precioBase: 29,
-    capacidadHabitacion: 2,
-  },
-]
+import logo from '../../assets/images/Logo.png'
+import banner from '../../assets/images/banner.png'
+import hotelImg from '../../assets/images/hotelJJ.png'
 
 export default function PublicHome() {
-  const navigate = useNavigate()
-  const { isAuthenticated, hasRole } = useAuth()
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     bookingApi.search('')
-      .then((items) => alive && setRooms(items.length ? items.slice(0, 3) : fallbackRooms))
-      .catch(() => alive && setRooms(fallbackRooms))
-      .finally(() => alive && setLoading(false))
+      .then((items) => {
+        if (alive) {
+          // Filtrar solo las que tengan imagen o datos validos si es necesario, 
+          // pero aqui simplemente tomamos las primeras 3 reales
+          setRooms(items.slice(0, 3))
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching rooms:', err)
+        if (alive) setRooms([])
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
 
     return () => {
       alive = false
@@ -53,59 +34,125 @@ export default function PublicHome() {
   }, [])
 
   return (
-    <main>
-      <section className="relative overflow-hidden bg-white dark:bg-slate-950">
-        <div className="mx-auto grid min-h-[560px] max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8">
-          <div className="space-y-7">
-            <p className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
-              Reservas directas en Cuenca
-            </p>
-            <div className="space-y-4">
-              <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-5xl">
-                Encuentra una habitacion lista para descansar hoy.
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-                Revisa disponibilidad, compara tipos de habitacion y deja tu reserva pendiente para que el equipo la confirme.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/habitaciones" className="rounded-full bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                Buscar habitaciones
-              </Link>
-              <Link to="/login" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                Panel administrativo
-              </Link>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-            <img
-              src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85"
-              alt="Habitacion de hotel moderna"
-              className="h-[420px] w-full object-cover"
-            />
+    <main className="bg-slate-50 dark:bg-slate-950">
+      {/* Hero Section */}
+      <section className="relative h-[600px] w-full overflow-hidden">
+        <img
+          src={banner}
+          alt="Alojamiento JJ Banner"
+          className="absolute inset-0 h-full w-full object-cover brightness-50"
+        />
+        <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col items-center justify-center px-4 text-center text-white sm:px-6 lg:px-8">
+          <img src={logo} alt="Logo" className="mb-8 h-32 w-auto animate-fade-in drop-shadow-2xl sm:h-40" />
+          <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight sm:text-6xl">
+            Tu refugio perfecto en el corazón de Cuenca
+          </h1>
+          <p className="mt-6 max-w-2xl text-xl text-slate-200">
+            Disfruta de la mejor experiencia de hospedaje con nosotros. Comodidad, elegancia y atención personalizada.
+          </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <Link
+              to="/habitaciones"
+              className="rounded-full bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-105 hover:bg-indigo-500 active:scale-95"
+            >
+              Reservar Ahora
+            </Link>
+            <a
+              href="#sobre-nosotros"
+              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-lg font-bold text-white backdrop-blur-sm transition-all hover:bg-white hover:text-indigo-600"
+            >
+              Conócenos
+            </a>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Destacadas</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">Habitaciones disponibles</h2>
-          </div>
-          <Link to="/habitaciones" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
-            Ver todo
-          </Link>
+      {/* Habitaciones Destacadas */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mb-12 flex flex-col items-center text-center">
+          <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Nuestras Joyas</p>
+          <h2 className="mt-2 text-4xl font-bold text-slate-900 dark:text-white sm:text-5xl">Habitaciones Disponibles</h2>
+          <div className="mt-4 h-1.5 w-20 rounded-full bg-indigo-600" />
         </div>
 
         {loading ? (
-          <div className="rounded-lg bg-white p-8 text-center text-slate-500 dark:bg-slate-900">Cargando habitaciones...</div>
+          <div className="flex min-h-[300px] items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          </div>
+        ) : rooms.length > 0 ? (
+          <>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {rooms.map((room) => (
+                <RoomCard key={room.idHabitacion || room.id} room={room} />
+              ))}
+            </div>
+            <div className="mt-12 text-center">
+              <Link to="/habitaciones" className="inline-flex items-center gap-2 font-bold text-indigo-600 hover:text-indigo-500">
+                Ver todas las habitaciones
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            </div>
+          </>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {rooms.map((room, index) => <RoomCard key={room.idHabitacion || room.id || index} room={room} />)}
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xl text-slate-500">No hay habitaciones disponibles en este momento.</p>
+            <Link to="/habitaciones" className="mt-4 inline-block text-indigo-600 underline">Consultar todas las fechas</Link>
           </div>
         )}
+      </section>
+
+      {/* Sobre Nosotros Section */}
+      <section id="sobre-nosotros" className="bg-white py-24 dark:bg-slate-900">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+            <div className="relative group">
+              <div className="absolute -inset-4 rounded-2xl bg-indigo-600/10 blur-xl transition-all group-hover:bg-indigo-600/20" />
+              <img
+                src={hotelImg}
+                alt="Nuestro Hotel"
+                className="relative rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+              <div className="absolute -bottom-6 -right-6 hidden h-32 w-32 rounded-2xl bg-indigo-600 p-4 shadow-xl sm:block">
+                <div className="flex h-full flex-col items-center justify-center text-center text-white">
+                  <span className="text-3xl font-bold">10+</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider">Años de Excelencia</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Quiénes Somos</p>
+                <h2 className="mt-2 text-4xl font-bold text-slate-900 dark:text-white sm:text-5xl">Alojamiento JJ</h2>
+              </div>
+              
+              <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+                Alojamiento JJ es un emprendimiento familiar nacido con el deseo de ofrecer un hogar lejos de casa. 
+                Ubicados en el corazón de Cuenca, nos enfocamos en brindar una experiencia personalizada que 
+                combine la modernidad de nuestras instalaciones con la calidez tradicional de nuestra tierra.
+              </p>
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 p-6 transition-colors hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/30">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Nuestra Misión</h3>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                    Brindar un servicio de alojamiento excepcional en la ciudad de Cuenca, combinando confort, 
+                    hospitalidad y tecnología para superar las expectativas de nuestros huéspedes.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-6 transition-colors hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/30">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Nuestra Visión</h3>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                    Ser el referente de hospitalidad en el Austro ecuatoriano, reconocidos por nuestra calidez 
+                    humana, excelencia en el servicio y compromiso con el bienestar de quienes nos visitan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   )

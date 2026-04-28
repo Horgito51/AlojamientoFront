@@ -82,7 +82,7 @@ export default function ReservationPage() {
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Reserva</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">Completa tu solicitud</h1>
-        <p className="mt-2 text-sm text-slate-500">Tu reserva quedara pendiente hasta confirmacion del equipo.</p>
+        <p className="mt-2 text-sm text-slate-500">Tu reserva se confirmará automáticamente al realizar el pago seguro.</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">

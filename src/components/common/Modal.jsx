@@ -20,21 +20,21 @@ export const Modal = ({ isOpen, onClose, title, children, footer }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" 
+                className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" 
                 onClick={onClose}
                 aria-hidden="true"
             />
 
             {/* Modal Dialog */}
-            <div className="bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full z-10 overflow-hidden flex flex-col max-h-full">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl transform transition-all sm:max-w-lg w-full z-10 overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-800">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                         {title}
                     </h3>
                     <button 
                         onClick={onClose} 
-                        className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                        className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 p-1"
                     >
                         <span className="sr-only">Cerrar</span>
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -44,13 +44,13 @@ export const Modal = ({ isOpen, onClose, title, children, footer }) => {
                 </div>
 
                 {/* Content */}
-                <div className="px-6 py-4 overflow-y-auto">
+                <div className="px-8 py-6 overflow-y-auto custom-scrollbar">
                     {children}
                 </div>
 
                 {/* Footer */}
                 {footer && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                    <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end space-x-3">
                         {footer}
                     </div>
                 )}

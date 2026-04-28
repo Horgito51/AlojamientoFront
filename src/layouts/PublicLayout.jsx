@@ -38,10 +38,10 @@ export default function PublicLayout() {
           </Link>
  
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 md:flex">
-            <Link className="hover:text-indigo-600" to="/habitaciones">Habitaciones</Link>
-            <Link className="hover:text-indigo-600" to="/reserva">Reservar</Link>
+            <Link className="hover:text-indigo-600 transition-colors" to="/habitaciones">Habitaciones</Link>
+            <Link className="hover:text-indigo-600 transition-colors" to="/reserva">Reservar</Link>
             {isAdmin && <Link className="font-bold text-indigo-600 dark:text-indigo-400" to="/admin">Admin</Link>}
-            <button type="button" className="hover:text-indigo-600" onClick={() => navigate('/#contacto')}>Contacto</button>
+            <a href="/#sobre-nosotros" className="hover:text-indigo-600 transition-colors">Sobre Nosotros</a>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -82,10 +82,49 @@ export default function PublicLayout() {
 
       <Outlet />
 
-      <footer id="contacto" className="border-t border-slate-200 bg-white px-4 py-8 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p>Alojamiento JJ. Habitaciones comodas, tarifas claras y atencion cercana.</p>
-          <p>Cuenca, Ecuador</p>
+      <footer className="border-t border-slate-200 bg-white px-4 py-12 dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white shadow-sm">
+                  JJ
+                </span>
+                <span className="text-lg font-bold text-slate-950 dark:text-white">Alojamiento JJ</span>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Tu hogar lejos de casa en la ciudad de Cuenca. Comodidad y elegancia a tu alcance.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Enlaces</h4>
+              <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li><Link to="/habitaciones" className="hover:text-indigo-600">Habitaciones</Link></li>
+                <li><Link to="/reserva" className="hover:text-indigo-600">Reservar</Link></li>
+                <li><a href="#sobre-nosotros" className="hover:text-indigo-600">Sobre Nosotros</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Contacto</h4>
+              <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li>Cuenca, Ecuador</li>
+                <li>info@alojamientojj.com</li>
+                <li>+593 99 999 9999</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Redes</h4>
+              <div className="mt-4 flex gap-4">
+                {/* Placeholder for social icons */}
+                <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800" />
+                <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800" />
+                <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 border-t border-slate-100 pt-8 text-center text-xs text-slate-400 dark:border-slate-900">
+            <p>© {new Date().getFullYear()} Alojamiento JJ. Todos los derechos reservados.</p>
+          </div>
         </div>
       </footer>
     </div>

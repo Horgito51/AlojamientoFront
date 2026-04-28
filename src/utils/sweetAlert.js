@@ -6,26 +6,31 @@ const isDarkTheme = () => document.documentElement.classList.contains('dark')
 const themeOptions = () => {
   const isDark = isDarkTheme()
   return {
-    background: isDark ? '#1e293b' : '#ffffff',
-    color: isDark ? '#f8fafc' : '#0f172a',
+    background: isDark ? '#0f172a' : '#ffffff',
+    color: isDark ? '#f8fafc' : '#1e293b',
     confirmButtonColor: '#4f46e5',
-    cancelButtonColor: isDark ? '#334155' : '#64748b',
+    cancelButtonColor: isDark ? '#334155' : '#94a3b8',
     customClass: {
-      popup: 'app-swal-popup rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl',
-      title: 'app-swal-title text-xl font-bold',
-      htmlContainer: 'app-swal-text text-sm leading-relaxed',
-      confirmButton: 'app-swal-button px-6 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 active:scale-95',
-      cancelButton: 'app-swal-button px-6 py-2.5 rounded-lg font-semibold transition-all hover:scale-105 active:scale-95',
+      popup: 'app-swal-popup rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl',
+      title: 'app-swal-title text-2xl font-bold tracking-tight',
+      htmlContainer: 'app-swal-text text-base leading-relaxed text-slate-600 dark:text-slate-400',
+      confirmButton: 'app-swal-button px-8 py-3 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20',
+      cancelButton: 'app-swal-button px-8 py-3 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95',
     },
-    // Auto-detect theme if possible, though manual override is more reliable with Tailwind dark class
+    showClass: {
+      popup: 'animate__animated animate__fadeInUp animate__faster'
+    },
+    hideClass: {
+      popup: 'animate__animated animate__fadeOutDown animate__faster'
+    },
     heightAuto: false,
-    backdrop: `rgba(0,0,0,0.4) blur(4px)`
+    backdrop: `rgba(15, 23, 42, ${isDark ? '0.8' : '0.4'}) blur(8px)`,
+    buttonsStyling: false,
   }
 }
 
 /**
  * Parsea los errores del backend para mostrarlos de forma amigable.
- * El backend suele devolver { errors: { field: ["msg1", "msg2"] } } o { message: "msg" }
  */
 export const getErrorMessage = (error) => {
   const data = error.response?.data
@@ -38,16 +43,17 @@ export const getErrorMessage = (error) => {
     return `<ul class="mt-2 list-disc pl-5">${errorList}</ul>`
   }
 
-  return data.message || data.error || 'No se pudo procesar la solicitud.'
+  return data.message || data.error || data.title || 'No se pudo procesar la solicitud.'
 }
 
 export const showSuccess = (title, text) =>
   Swal.fire({
     ...themeOptions(),
     icon: 'success',
+    iconColor: '#10b981',
     title,
     html: text,
-    timer: 2500,
+    timer: 3000,
     timerProgressBar: true,
   })
 
@@ -55,6 +61,7 @@ export const showError = (title, text) =>
   Swal.fire({
     ...themeOptions(),
     icon: 'error',
+    iconColor: '#ef4444',
     title,
     html: typeof text === 'string' ? text : getErrorMessage(text),
   })
@@ -63,21 +70,22 @@ export const showLoading = (title = 'Procesando...', text = 'Por favor espera un
   Swal.fire({
     ...themeOptions(),
     title,
-    text,
+    html: text,
     allowOutsideClick: false,
     didOpen: () => {
       Swal.showLoading()
     }
   })
 
-export const confirmDelete = (text = 'Esta accion no se puede deshacer.') =>
+export const confirmDelete = (text = 'Esta acción no se puede deshacer.') =>
   Swal.fire({
     ...themeOptions(),
     icon: 'warning',
-    title: 'Eliminar registro',
+    iconColor: '#f59e0b',
+    title: '¿Estás seguro?',
     text,
     showCancelButton: true,
-    confirmButtonText: 'Si, eliminar',
+    confirmButtonText: 'Sí, eliminar',
     cancelButtonText: 'Cancelar',
     reverseButtons: true,
     focusCancel: true,

@@ -52,7 +52,7 @@ const ReservationSummary = ({ selectedRooms, nights, onConfirm, loading, totals,
         </button>
         
         <p className="mt-4 text-center text-xs text-slate-500">
-          No se te cobrará nada todavía. La reserva quedará en estado PENDIENTE.
+          Al confirmar, procederás al pago seguro para completar tu reserva.
         </p>
       </div>
     </div>

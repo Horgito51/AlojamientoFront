@@ -12,7 +12,7 @@ import PaymentModal from '../../components/marketplace/PaymentModal'
 const money = (value) => Number((Number(value) || 0).toFixed(2))
 const getRoomId = (room) => Number(room.idHabitacion ?? room.IdHabitacion ?? room.id ?? room.Id)
 const getRoomSucursalId = (room) => Number(room.idSucursal ?? room.IdSucursal ?? room.sucursalId ?? APP_CONFIG.DEFAULT_SUCURSAL_ID)
-const toApiDate = (value) => new Date(`${value}T12:00:00`).toISOString()
+const toApiDate = (value) => `${value}T00:00:00`
 
 const getApiMessage = (error) => {
   console.error('Reservation error:', error?.response?.data || error)
@@ -69,7 +69,7 @@ const isAuthError = (error) => {
 const MarketplacePage = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [rooms, setRooms] = useState([])
   const [selectedRooms, setSelectedRooms] = useState([])
   const [loading, setLoading] = useState(true)
@@ -89,8 +89,8 @@ const MarketplacePage = () => {
       try {
         const params = {}
         if (dates.checkIn && dates.checkOut) {
-          params.fechaInicio = dates.checkIn
-          params.fechaFin = dates.checkOut
+          params.fechaInicio = toApiDate(dates.checkIn)
+          params.fechaFin = toApiDate(dates.checkOut)
         }
         
         const data = await reservationService.getHabitaciones(params)
@@ -184,7 +184,8 @@ const MarketplacePage = () => {
     const fechaFin = toApiDate(dates.checkOut)
 
     return {
-      idSucursal: getRoomSucursalId(selectedRooms[0]),
+      idCliente: Number(user?.idCliente || user?.id || 0),
+      idSucursal: getRoomSucursalId(selectedRooms[0]) || APP_CONFIG.DEFAULT_SUCURSAL_ID,
       fechaInicio,
       fechaFin,
       subtotalReserva: totals.subtotal,
@@ -218,7 +219,10 @@ const MarketplacePage = () => {
     }
   }
 
-  const handleConfirmReservation = async (event) => {
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [pendingPayload, setPendingPayload] = useState(null)
+
+  const handleConfirmReservation = (event) => {
     event.preventDefault()
     if (!validateSelection()) return
     if (!isAuthenticated()) {
@@ -226,48 +230,34 @@ const MarketplacePage = () => {
       return
     }
 
-    setSubmitting(true)
-    try {
-      const reserva = await reservationService.createPublicReserva(buildReservaPayload())
-      const code = reserva?.codigoReserva || reserva?.idReserva || 'pendiente'
-
-      setCreatedReservation(reserva)
-      setPaymentResult(null)
-      Swal.fire('Exito', `Tu reserva ha sido creada correctamente. Codigo: ${code}.`, 'success')
-    } catch (err) {
-      if (isAuthError(err)) {
-        setShowConfirm(false)
-        await Swal.fire('Inicia sesion', 'Tu sesion no esta disponible. Vuelve a iniciar sesion para continuar.', 'info')
-        navigate('/login', { state: { from: location.pathname } })
-        return
-      }
-
-      Swal.fire('Error', getApiMessage(err), 'error')
-    } finally {
-      setSubmitting(false)
-    }
+    const payload = buildReservaPayload()
+    setPendingPayload(payload)
+    setShowPaymentModal(true)
   }
 
-  const handlePaymentSuccess = (result) => {
-    setPaymentResult(result)
-    setCreatedReservation((current) => ({
-      ...current,
-      estadoReserva: result?.estadoReserva || 'APR',
-      saldoPendiente: 0,
-    }))
-    Swal.fire('Pago realizado con exito', 'Reserva aprobada.', 'success')
+  const handlePaymentSuccess = (reserva) => {
+    setCreatedReservation(reserva)
+    setPaymentResult({ success: true })
+    setShowPaymentModal(false)
+    setShowConfirm(false)
     setSelectedRooms([])
     setDates({ checkIn: '', checkOut: '' })
     setObservaciones('')
-    setShowConfirm(false)
+    setPendingPayload(null)
+    
+    const code = reserva?.codigoReserva || reserva?.idReserva || 'confirmada'
+    Swal.fire('¡Éxito!', `Tu reserva ha sido pagada y creada correctamente. Código: ${code}.`, 'success')
   }
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-12 dark:bg-black sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {paymentResult && (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-            Pago realizado con exito. Reserva aprobada.
+          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Pago realizado con éxito. Reserva aprobada y confirmada.
           </div>
         )}
 
@@ -346,12 +336,13 @@ const MarketplacePage = () => {
         </div>
       </div>
 
-      {createdReservation && !paymentResult && (
+      {showPaymentModal && pendingPayload && (
         <PaymentModal
-          reservation={createdReservation}
-          total={createdReservation.totalReserva ?? createdReservation.TotalReserva ?? totals.total}
+          reservationData={pendingPayload}
+          user={user}
+          total={totals.total}
           onSuccess={handlePaymentSuccess}
-          onClose={() => setCreatedReservation(null)}
+          onClose={() => setShowPaymentModal(false)}
         />
       )}
     </div>

@@ -83,5 +83,9 @@ export const reservationService = {
   async simulatePayment(paymentData) {
     const { data } = await api.post(ENDPOINTS.PUBLIC.PAGOS.simular, paymentData);
     return normalizeEntity(data);
+  },
+
+  async cancelReserva(id, motivo) {
+    await api.patch(ENDPOINTS.INTERNAL.RESERVAS.cancelar(id), { motivo });
   }
 };
