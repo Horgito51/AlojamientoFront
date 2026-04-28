@@ -37,6 +37,11 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
     setError('')
   }
 
+  const getPaymentStatus = (paymentResult) => {
+    const value = String(paymentResult?.estadoPago || paymentResult?.EstadoPago || paymentResult?.estado || paymentResult?.Estado || '').toUpperCase()
+    return value
+  }
+
   const pay = async (event) => {
     event.preventDefault()
 
@@ -83,7 +88,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
         monto: Number(reservaTotal || 0),
       })
 
-      const isApproved = paymentResult?.estadoPago === 'APR' || paymentResult?.EstadoPago === 'APR'
+      const paymentStatus = getPaymentStatus(paymentResult)
+      const isApproved = ['APR', 'CON', 'PAG', 'OK', 'PAID'].includes(paymentStatus)
       
       if (!isApproved) {
         // 3. Si el pago falla, CANCELAMOS la reserva creada (Rollback atómico)
@@ -102,6 +108,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       setStatus('success')
       setTimeout(() => {
         onSuccess(createdReserva)
+        onClose()
       }, 1500)
 
     } catch (err) {

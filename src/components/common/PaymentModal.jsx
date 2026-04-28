@@ -30,6 +30,11 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
     setCardData(prev => ({ ...prev, [name]: nextValue }));
   };
 
+  const getPaymentStatus = (paymentResult) => {
+    const value = String(paymentResult?.estadoPago || paymentResult?.EstadoPago || paymentResult?.estado || paymentResult?.Estado || '').toUpperCase()
+    return value
+  }
+
   const handlePayment = async (e) => {
     e.preventDefault();
     const [expiryMonth, expiryYear] = cardData.expiry.split('/').map((item) => Number(item));
@@ -109,7 +114,8 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       // 2. Procesar Pago (Simulación) con ID REAL
       const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic);
       
-      const isApproved = paymentResult?.estadoPago === 'APR' || paymentResult?.EstadoPago === 'APR' || paymentResult?.estadoPago === 'CON' || paymentResult?.EstadoPago === 'CON';
+      const paymentStatus = getPaymentStatus(paymentResult)
+      const isApproved = ['APR', 'CON', 'PAG', 'OK', 'PAID'].includes(paymentStatus)
       
       if (!isApproved) {
         // 3. Si falla, cancelamos
