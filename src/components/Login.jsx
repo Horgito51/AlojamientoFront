@@ -86,6 +86,8 @@ export default function Login({ onLoginSuccess }) {
     setIsSubmitting(true)
     try {
       const username = email.trim()
+      console.log('[Login] Intentando login con:', username)
+      
       const { data } = await api.post(ENDPOINTS.AUTH.login, {
         username,
         password,
@@ -121,12 +123,22 @@ export default function Login({ onLoginSuccess }) {
       const destination = location.state?.from || (isAdmin ? '/admin' : '/habitaciones')
       navigate(destination, { replace: true })
     } catch (err) {
-      console.error('Login error:', err)
-      const msg = err.response?.status === 401
-        ? 'Correo o contrasena incorrectos. Verifica tus datos.'
-        : err.request
-          ? 'No se pudo iniciar sesion en este momento. Intenta de nuevo.'
-          : 'No se pudo iniciar sesion. Intenta nuevamente.'
+      console.error('[Login Error Full]:', err)
+      
+      let msg = 'No se pudo iniciar sesión en este momento. Intenta de nuevo.'
+      
+      if (err.response?.status === 401) {
+        msg = 'Correo o contraseña incorrectos. Verifica tus datos.'
+      } else if (err.code === 'ECONNABORTED') {
+        msg = 'La solicitud tardó demasiado. Verifica tu conexión.'
+      } else if (err.code === 'ERR_NETWORK') {
+        msg = 'No se puede conectar a la API. Verifica la URL del servidor.'
+      } else if (err.response?.status === 0 || err.message === 'Network Error') {
+        msg = 'Error de red. Verifica la conexión a internet.'
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message
+      }
+      
       setServerError(msg)
     } finally {
       setIsSubmitting(false)
