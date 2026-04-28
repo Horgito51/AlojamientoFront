@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { adminNavigation } from '../data/adminModules'
 import { useAuth } from '../hooks/useAuth'
 import logo from '../assets/images/Logo.png'
 
 export default function AdminLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const { auth: session, logout: authLogout } = useAuth()
   const grouped = adminNavigation.reduce((acc, item) => {
@@ -17,14 +19,27 @@ export default function AdminLayout() {
     navigate('/login', { replace: true })
   }
 
+  const closeSidebar = () => setSidebarOpen(false)
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:flex">
-        <Link to="/admin" className="mb-6 flex shrink-0 items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-transparent shadow-sm dark:border-slate-700">
+      {/* Overlay para móvil */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-30 w-72 flex-col border-r border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 transition-transform duration-300 lg:flex ${
+        sidebarOpen ? 'flex' : 'hidden'
+      } lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <Link to="/admin" onClick={closeSidebar} className="mb-6 flex flex-col shrink-0 items-center gap-3">
+          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-transparent shadow-sm dark:border-slate-700">
             <img src={logo} alt="Alojamiento JJ" className="h-full w-full object-contain p-1" />
           </span>
-          <span>
+          <span className="text-center">
             <span className="block text-sm font-bold">Panel administrativo</span>
             <span className="text-xs text-slate-500">Alojamiento JJ</span>
           </span>
@@ -40,6 +55,7 @@ export default function AdminLayout() {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/admin'}
+                    onClick={closeSidebar}
                     className={({ isActive }) =>
                       [
                         'block rounded-md px-3 py-2 text-sm font-medium transition',
@@ -61,9 +77,20 @@ export default function AdminLayout() {
       <div className="lg:pl-72">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Sesion activa</p>
-              <h1 className="text-lg font-semibold">{session?.nombreCompleto || session?.username || session?.email || 'Administrador'}</h1>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden rounded-md p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                aria-label="Abrir menú"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Sesion activa</p>
+                <h1 className="text-lg font-semibold">{session?.nombreCompleto || session?.username || session?.email || 'Administrador'}</h1>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Link to="/" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
