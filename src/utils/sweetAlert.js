@@ -37,10 +37,10 @@ export const getErrorMessage = (error) => {
   if (!data) return 'Ocurrió un error inesperado. Por favor, intenta de nuevo.'
 
   if (data.errors) {
-    const errorList = Object.entries(data.errors)
-      .map(([field, messages]) => `<li class="text-left mb-1"><strong>${field}:</strong> ${messages.join(', ')}</li>`)
-      .join('')
-    return `<ul class="mt-2 list-disc pl-5">${errorList}</ul>`
+    const errorMessages = Object.entries(data.errors)
+      .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+      .join('\n')
+    return errorMessages
   }
 
   return data.message || data.error || data.title || 'No se pudo procesar la solicitud.'
