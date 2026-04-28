@@ -38,8 +38,27 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   }
 
   const getPaymentStatus = (paymentResult) => {
-    const value = String(paymentResult?.estadoPago || paymentResult?.EstadoPago || paymentResult?.estado || paymentResult?.Estado || '').toUpperCase()
+    const value = String(
+      paymentResult?.estadoPago ||
+      paymentResult?.EstadoPago ||
+      paymentResult?.estado ||
+      paymentResult?.Estado ||
+      paymentResult?.status ||
+      paymentResult?.Status ||
+      ''
+    ).toUpperCase()
     return value
+  }
+
+  const isPaymentApproved = (paymentResult) => {
+    const paymentStatus = getPaymentStatus(paymentResult)
+    return (
+      ['APR', 'CON', 'PAG', 'OK', 'PAID', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO'].includes(paymentStatus) ||
+      paymentResult?.success === true ||
+      paymentResult?.Success === true ||
+      paymentResult?.aprobado === true ||
+      paymentResult?.Aprobado === true
+    )
   }
 
   const pay = async (event) => {
@@ -88,10 +107,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
         monto: Number(reservaTotal || 0),
       })
 
-      const paymentStatus = getPaymentStatus(paymentResult)
-      const isApproved = ['APR', 'CON', 'PAG', 'OK', 'PAID'].includes(paymentStatus)
-      
-      if (!isApproved) {
+      if (!isPaymentApproved(paymentResult)) {
         // 3. Si el pago falla, CANCELAMOS la reserva creada (Rollback atómico)
         try {
           await reservationService.cancelReserva(createdReservaId, 'Pago rechazado o cancelado en pasarela.')

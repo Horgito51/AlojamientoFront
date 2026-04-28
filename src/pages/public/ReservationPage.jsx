@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { buildClientePayload, buildReservationTotals, buildReservaPayload, reservasApi } from '../../api/reservasApi'
+import { buildClientePayload, buildReservationTotals } from '../../api/reservasApi'
 import PaymentModal from '../../components/common/PaymentModal'
 
 const initialForm = {
@@ -31,7 +31,7 @@ export default function ReservationPage() {
     nombreTipoHabitacion: selectedRoom ? '' : 'Habitacion seleccionada',
   })
   const [status, setStatus] = useState({ type: '', message: '' })
-  const [saving, setSaving] = useState(false)
+  const saving = false
   const [showPayment, setShowPayment] = useState(false)
   const [createdReserva, setCreatedReserva] = useState(null)
 

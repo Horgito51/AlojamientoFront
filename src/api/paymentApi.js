@@ -1,5 +1,6 @@
 import api from './axiosConfig';
 import { ENDPOINTS } from './endpoints';
+import { normalizeEntity } from './normalize';
 
 export const paymentApi = {
   /**
@@ -14,7 +15,7 @@ export const paymentApi = {
       idReserva,
       monto
     });
-    return data;
+    return normalizeEntity(data);
   },
 
   /**
@@ -23,6 +24,6 @@ export const paymentApi = {
    */
   async generarFactura(idReserva) {
     const { data } = await api.post(ENDPOINTS.INTERNAL.FACTURAS.generarReserva(idReserva));
-    return data;
+    return normalizeEntity(data);
   }
 };

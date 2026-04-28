@@ -31,8 +31,27 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
   };
 
   const getPaymentStatus = (paymentResult) => {
-    const value = String(paymentResult?.estadoPago || paymentResult?.EstadoPago || paymentResult?.estado || paymentResult?.Estado || '').toUpperCase()
+    const value = String(
+      paymentResult?.estadoPago ||
+      paymentResult?.EstadoPago ||
+      paymentResult?.estado ||
+      paymentResult?.Estado ||
+      paymentResult?.status ||
+      paymentResult?.Status ||
+      ''
+    ).toUpperCase()
     return value
+  }
+
+  const isPaymentApproved = (paymentResult) => {
+    const paymentStatus = getPaymentStatus(paymentResult)
+    return (
+      ['APR', 'CON', 'PAG', 'OK', 'PAID', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO'].includes(paymentStatus) ||
+      paymentResult?.success === true ||
+      paymentResult?.Success === true ||
+      paymentResult?.aprobado === true ||
+      paymentResult?.Aprobado === true
+    )
   }
 
   const handlePayment = async (e) => {
@@ -114,13 +133,14 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       // 2. Procesar Pago (Simulación) con ID REAL
       const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic);
       
-      const paymentStatus = getPaymentStatus(paymentResult)
-      const isApproved = ['APR', 'CON', 'PAG', 'OK', 'PAID'].includes(paymentStatus)
-      
-      if (!isApproved) {
+      if (!isPaymentApproved(paymentResult)) {
         // 3. Si falla, cancelamos
         try {
-          await reservasApi.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
+          if (isPublic) {
+            await reservationService.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
+          } else {
+            await reservasApi.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
+          }
         } catch { /* ignore */ }
         
         setStatus('error');
