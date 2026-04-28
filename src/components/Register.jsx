@@ -4,6 +4,8 @@ import api from '../api/axiosConfig'
 import { ENDPOINTS } from '../api/endpoints'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { getErrorMessage } from '../utils/sweetAlert'
+import { EMAIL_REGEX } from '../utils/validation'
 
 function ThemeToggle() {
   const { isDark, toggle } = useTheme()
@@ -67,7 +69,7 @@ export default function Register() {
     else if (formData.nombres.trim().length < 2) next.nombres = 'El nombre debe tener al menos 2 caracteres.'
 
     if (!formData.correo.trim()) next.correo = 'El correo es obligatorio.'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo.trim())) {
+    else if (!EMAIL_REGEX.test(formData.correo.trim())) {
       next.correo = 'El correo no es valido.'
     }
 
@@ -130,20 +132,10 @@ export default function Register() {
     } catch (error) {
       console.error('Register error:', error?.response?.data || error)
 
-      const validationMessage = error.response?.data?.errors
-        ? Object.values(error.response.data.errors)
-            .flatMap((messages) => (Array.isArray(messages) ? messages : [messages]))
-            .find((message) => typeof message === 'string' && message.trim())
-        : ''
-
       const message =
-        validationMessage ||
-        error.response?.data?.message ||
-        error.response?.data?.error?.message ||
-        error.response?.data?.errorDetail?.mensaje ||
         (error.message === 'REGISTER_INCOMPLETE'
           ? 'No pudimos completar el registro. Intenta iniciar sesion o registrarte otra vez.'
-          : 'No se pudo completar el registro. Intenta nuevamente.')
+          : getErrorMessage(error))
 
       setServerError(message)
     } finally {

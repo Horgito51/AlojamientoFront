@@ -174,8 +174,14 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         throw new Error('No se pudo obtener la reserva o el total a pagar.');
       }
 
-      // 2. Procesar Pago (Simulación) con ID REAL
-      const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic);
+      if (!isPublic) {
+        await reservasApi.confirmReserva(idReserva);
+      }
+
+      const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic, {
+        tokenPago: `card_${cardData.number.slice(-4)}_${Date.now()}`,
+        referencia: `RES-${idReserva}-${Date.now()}`,
+      });
       
       if (!isPaymentApproved(paymentResult)) {
         // 3. Si falla, cancelamos

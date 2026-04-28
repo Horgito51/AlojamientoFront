@@ -5,7 +5,7 @@ import { adminApi } from '../../api/adminApi'
 import { ENDPOINTS } from '../../api/endpoints'
 import AdminDataTable from '../../components/admin/AdminDataTable'
 import { getActionLabel, getFieldLabel, getFieldValueLabel, getStatusTone, isStatusField, readValue, resolveId } from '../../utils/adminModule'
-import { confirmDelete, showError, showSuccess } from '../../utils/sweetAlert'
+import { confirmDelete, getErrorMessage, showError, showSuccess } from '../../utils/sweetAlert'
 import PaymentModal from '../../components/common/PaymentModal'
 
 const iconPaths = {
@@ -195,7 +195,7 @@ export default function AdminModulePage() {
   const remove = async (row) => {
     const id = getRowId(row)
     if (!id) return
-    const result = await confirmDelete(`Se eliminara el registro ${id}.`)
+    const result = await confirmDelete(`Se eliminara el registro ${id}. Si tiene reservas, habitaciones activas o datos relacionados, el backend bloqueara la operacion.`)
     if (!result.isConfirmed) return
 
     setError('')
@@ -203,8 +203,8 @@ export default function AdminModulePage() {
       await adminApi.remove(module.endpoint, id)
       await load()
       await showSuccess('Registro eliminado', 'El registro se elimino correctamente.')
-    } catch {
-      await showError('No se pudo eliminar', 'El backend rechazo la operacion o el registro esta relacionado con otros datos.')
+    } catch (err) {
+      await showError('No se pudo eliminar', getErrorMessage(err))
     }
   }
 
@@ -261,8 +261,8 @@ export default function AdminModulePage() {
       }
       await load()
       await showSuccess('Accion ejecutada', 'La operacion se completo correctamente.')
-    } catch {
-      await showError('No se pudo ejecutar', 'La accion no fue aceptada por el backend.')
+    } catch (err) {
+      await showError('No se pudo ejecutar', getErrorMessage(err))
     }
   }
 

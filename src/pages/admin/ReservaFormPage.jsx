@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi } from '../../api/adminApi'
 import { ENDPOINTS } from '../../api/endpoints'
 import { IVA_RATE, getNights } from '../../api/reservasApi'
-import { showError, showSuccess } from '../../utils/sweetAlert'
+import { getErrorMessage, showError, showSuccess } from '../../utils/sweetAlert'
+import { isReservableRoomState } from '../../utils/validation'
 
 // ─── Estado inicial del formulario ───────────────────────────────────────────
 const INITIAL_FORM = {
@@ -123,12 +124,14 @@ export default function ReservaFormPage() {
     const numeroHabitacion = readValue(merged, ['numeroHabitacion', 'NumeroHabitacion'], `Hab ${idHabitacion}`)
     const precioBase = Number(readValue(source, ['precioBase', 'PrecioBase', 'precioNocheAplicado', 'PrecioNocheAplicado'], readValue(merged, ['precioBase', 'PrecioBase'], 0)))
     const sucursalId = readValue(merged, ['idSucursal', 'IdSucursal'], '')
+    const estadoHabitacion = readValue(merged, ['estadoHabitacion', 'EstadoHabitacion'], 'DIS')
 
     return {
       idHabitacion,
       label: `${numeroHabitacion} — $${precioBase}/noche`,
       precioBase,
       sucursalId,
+      estadoHabitacion,
     }
   }
 
@@ -181,7 +184,7 @@ export default function ReservaFormPage() {
         if (!alive) return
         setClientes(cls)
         setSucursales(sucs)
-        setHabitacionesDisponibles(habs)
+        setHabitacionesDisponibles(habs.filter((item) => isReservableRoomState(readValue(item, ['estadoHabitacion', 'EstadoHabitacion'], 'DIS'))))
         setServiciosDisponibles(srvs.filter((item) => readValue(item, ['estadoCatalogo', 'EstadoCatalogo'], 'ACT') !== 'INA'))
       })
       .catch(() => {
@@ -260,14 +263,26 @@ export default function ReservaFormPage() {
     )
     if (!found) return
 
+    if (!isReservableRoomState(readValue(found, ['estadoHabitacion', 'EstadoHabitacion'], 'DIS'))) {
+      setError('La habitacion seleccionada no esta disponible para reservar.')
+      return
+    }
+
+    const foundSucursalId = String(readValue(found, ['idSucursal', 'IdSucursal'], ''))
+    if (form.idSucursal && foundSucursalId && foundSucursalId !== String(form.idSucursal)) {
+      setError('La habitacion seleccionada no pertenece a la sucursal de la reserva.')
+      return
+    }
+
     const idHabitacion = found.idHabitacion ?? found.IdHabitacion ?? found.id
     const numeroHabitacion = found.numeroHabitacion ?? found.NumeroHabitacion ?? `Hab ${id}`
     const precioBase = found.precioBase ?? found.PrecioBase ?? 0
     const sucursalId = found.idSucursal ?? found.IdSucursal ?? ''
+    const estadoHabitacion = found.estadoHabitacion ?? found.EstadoHabitacion ?? 'DIS'
 
     setHabitaciones((prev) => [
       ...prev,
-      { idHabitacion, label: `${numeroHabitacion} — $${precioBase}/noche`, precioBase, sucursalId },
+      { idHabitacion, label: `${numeroHabitacion} — $${precioBase}/noche`, precioBase, sucursalId, estadoHabitacion },
     ])
   }
 
@@ -322,6 +337,12 @@ export default function ReservaFormPage() {
       return setError('La fecha de inicio debe ser anterior a la de fin.')
     if (habitaciones.length === 0)
       return setError('Agregue al menos una habitación a la reserva.')
+    if (habitaciones.some((habitacion) => !isReservableRoomState(habitacion.estadoHabitacion))) {
+      return setError('Solo se pueden reservar habitaciones disponibles.')
+    }
+    if (habitaciones.some((habitacion) => String(habitacion.sucursalId || '') !== String(form.idSucursal))) {
+      return setError('Todas las habitaciones deben pertenecer a la sucursal seleccionada.')
+    }
 
     const payload = buildReservaPayload({ form, habitaciones, servicios, totals })
     console.log('[ReservaFormPage] payload →', JSON.stringify(payload, null, 2))
@@ -336,11 +357,7 @@ export default function ReservaFormPage() {
       )
       navigate('/admin/reservas', { replace: true })
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.response?.data?.title ||
-        'No se pudo guardar la reserva.'
+      const msg = getErrorMessage(err)
       setError(msg)
       await showError('Error al guardar', msg)
     } finally {
@@ -530,7 +547,10 @@ export default function ReservaFormPage() {
               {habitacionesDisponibles
                 .filter((h) => {
                   const id = h.idHabitacion ?? h.IdHabitacion ?? h.id
+                  const sucursalId = readValue(h, ['idSucursal', 'IdSucursal'], '')
                   return !habitaciones.some((sel) => sel.idHabitacion === id)
+                    && isReservableRoomState(readValue(h, ['estadoHabitacion', 'EstadoHabitacion'], 'DIS'))
+                    && (!form.idSucursal || String(sucursalId) === String(form.idSucursal))
                 })
                 .map((h) => {
                   const id = h.idHabitacion ?? h.IdHabitacion ?? h.id

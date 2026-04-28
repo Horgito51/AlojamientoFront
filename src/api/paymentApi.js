@@ -9,11 +9,13 @@ export const paymentApi = {
    * @param {number} monto 
    * @param {boolean} isPublic Indica si se usa el endpoint público o el interno.
    */
-  async simularPago(idReserva, monto, isPublic = true) {
+  async simularPago(idReserva, monto, isPublic = true, options = {}) {
     const url = isPublic ? ENDPOINTS.PUBLIC.PAGOS.simular : ENDPOINTS.INTERNAL.PAGOS.simular;
     const { data, status } = await api.post(url, {
       idReserva,
-      monto
+      monto,
+      tokenPago: options.tokenPago,
+      referencia: options.referencia
     });
     if ((data === undefined || data === null || data === '') && status >= 200 && status < 300) {
       return { success: true, estadoPago: 'OK' };

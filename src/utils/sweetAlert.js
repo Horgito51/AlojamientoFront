@@ -34,16 +34,24 @@ export const themeOptions = () => {
  */
 export const getErrorMessage = (error) => {
   const data = error.response?.data
-  if (!data) return 'Ocurrió un error inesperado. Por favor, intenta de nuevo.'
+  if (!data) return error.message || 'Ocurrio un error inesperado. Por favor, intenta de nuevo.'
 
   if (data.errors) {
     const errorMessages = Object.entries(data.errors)
-      .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-      .join('\n')
+      .map(([field, messages]) => {
+        const list = Array.isArray(messages) ? messages : [messages]
+        return `${field}: ${list.filter(Boolean).join(', ')}`
+      })
+      .filter(Boolean)
+      .join('<br />')
     return errorMessages
   }
 
-  return data.message || data.error || data.title || 'No se pudo procesar la solicitud.'
+  if (typeof data.error === 'object') {
+    return data.error.message || data.error.mensaje || data.error.detail || data.error.title || 'No se pudo procesar la solicitud.'
+  }
+
+  return data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.'
 }
 
 export const showSuccess = (title, text) =>

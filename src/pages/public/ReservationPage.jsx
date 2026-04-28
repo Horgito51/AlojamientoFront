@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { buildClientePayload, buildReservationTotals } from '../../api/reservasApi'
 import PaymentModal from '../../components/common/PaymentModal'
+import { EMAIL_REGEX, PHONE_10_REGEX, isReservableRoomState, validateEcuadorIdentification } from '../../utils/validation'
 
 const initialForm = {
   tipoIdentificacion: 'CED',
@@ -29,6 +30,7 @@ export default function ReservationPage() {
     idSucursal: selectedRoom ? '' : '1',
     precioBase: selectedRoom ? '' : '35',
     nombreTipoHabitacion: selectedRoom ? '' : 'Habitacion seleccionada',
+    estadoHabitacion: 'DIS',
   })
   const [status, setStatus] = useState({ type: '', message: '' })
   const saving = false
@@ -44,45 +46,71 @@ export default function ReservationPage() {
   const update = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+    setStatus({ type: '', message: '' })
   }
 
   const updateRoom = (event) => {
     const { name, value } = event.target
     setManualRoom((current) => ({ ...current, [name]: value }))
+    setStatus({ type: '', message: '' })
   }
 
   const submit = (event) => {
     event.preventDefault()
-    
+
     if (!getRoomId(room)) {
-      setStatus({ type: 'error', message: 'Selecciona una habitación desde el catálogo.' })
+      setStatus({ type: 'error', message: 'Selecciona una habitacion desde el catalogo.' })
       return
     }
 
-    // Guardar los datos preparados para la creación en el modal de pago
+    if (!isReservableRoomState(room.estadoHabitacion ?? room.EstadoHabitacion ?? 'DIS')) {
+      setStatus({ type: 'error', message: 'La habitacion seleccionada no esta disponible para reservar.' })
+      return
+    }
+
+    const identificationError = validateEcuadorIdentification(form.tipoIdentificacion, form.numeroIdentificacion)
+    if (identificationError) {
+      setStatus({ type: 'error', message: identificationError })
+      return
+    }
+
+    if (!EMAIL_REGEX.test(form.correo.trim())) {
+      setStatus({ type: 'error', message: 'El correo no tiene un formato valido.' })
+      return
+    }
+
+    if (form.telefono.trim() && !PHONE_10_REGEX.test(form.telefono.trim())) {
+      setStatus({ type: 'error', message: 'El telefono debe contener exactamente 10 digitos.' })
+      return
+    }
+
+    if (new Date(`${form.fechaInicio}T00:00:00`) >= new Date(`${form.fechaFin}T00:00:00`)) {
+      setStatus({ type: 'error', message: 'La fecha de fin debe ser posterior a la fecha de inicio.' })
+      return
+    }
+
     const pendingData = {
       clientePayload: buildClientePayload(form),
-      reservaPayload: { room, form, totals }
+      reservaPayload: { room, form, totals },
     }
-    
-    setCreatedReserva(pendingData) // Reusamos el estado para pasar los datos pendientes
+
+    setCreatedReserva(pendingData)
     setShowPayment(true)
   }
 
   const handlePaymentSuccess = () => {
     setStatus({
       type: 'success',
-      message: '¡Reserva completada y pagada con éxito!',
+      message: 'Reserva completada y pagada con exito.',
     })
   }
-
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Reserva</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">Completa tu solicitud</h1>
-        <p className="mt-2 text-sm text-slate-500">Tu reserva se confirmará automáticamente al realizar el pago seguro.</p>
+        <p className="mt-2 text-sm text-slate-500">Tu reserva se confirmara automaticamente al realizar el pago seguro.</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -99,7 +127,7 @@ export default function ReservationPage() {
               <input required name="nombres" value={form.nombres} onChange={update} placeholder="Nombres" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
               <input required name="apellidos" value={form.apellidos} onChange={update} placeholder="Apellidos" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
               <input required type="email" name="correo" value={form.correo} onChange={update} placeholder="Correo" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
-              <input name="telefono" value={form.telefono} onChange={update} placeholder="Telefono" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+              <input name="telefono" value={form.telefono} onChange={update} placeholder="Telefono" inputMode="numeric" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
               <input name="direccion" value={form.direccion} onChange={update} placeholder="Direccion" className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 md:col-span-2" />
             </div>
           </section>
@@ -149,10 +177,10 @@ export default function ReservationPage() {
         </aside>
       </div>
 
-      <PaymentModal 
-        isOpen={showPayment} 
-        onClose={() => setShowPayment(false)} 
-        reserva={createdReserva} 
+      <PaymentModal
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        reserva={createdReserva}
         onSuccess={handlePaymentSuccess}
         isPublic={true}
       />

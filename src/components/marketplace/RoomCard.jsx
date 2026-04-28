@@ -1,5 +1,6 @@
 import React from 'react';
 import { getRoomImageUrl } from '../../utils/roomImages';
+import { isReservableRoomState } from '../../utils/validation';
 
 const RoomCard = ({ room, isSelected, onToggle }) => {
   const {
@@ -9,6 +10,7 @@ const RoomCard = ({ room, isSelected, onToggle }) => {
     descripcionHabitacion,
     tipoHabitacionSlug
   } = room;
+  const isAvailable = isReservableRoomState(room.estadoHabitacion ?? room.EstadoHabitacion ?? 'DIS');
 
   const displayImage = getRoomImageUrl(room);
 
@@ -18,9 +20,9 @@ const RoomCard = ({ room, isSelected, onToggle }) => {
         isSelected 
           ? 'border-indigo-600 ring-2 ring-indigo-600 ring-opacity-50' 
           : 'border-slate-200 dark:border-slate-800'
-      }`}
-      onClick={() => onToggle(room)}
-      style={{ cursor: 'pointer' }}
+      } ${!isAvailable ? 'opacity-60 grayscale' : ''}`}
+      onClick={() => isAvailable && onToggle(room)}
+      style={{ cursor: isAvailable ? 'pointer' : 'not-allowed' }}
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {displayImage ? (
@@ -50,6 +52,11 @@ const RoomCard = ({ room, isSelected, onToggle }) => {
             {tipoHabitacionSlug || 'Standard'}
           </span>
         </div>
+        {!isAvailable && (
+          <div className="absolute inset-x-4 top-4 rounded-full bg-red-600 px-3 py-1 text-center text-xs font-bold uppercase tracking-wide text-white">
+            No disponible
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-5">

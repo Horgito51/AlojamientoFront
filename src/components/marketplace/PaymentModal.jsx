@@ -146,9 +146,13 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       const paymentPayload = createdReservaGuid ? {
         reservaGuid: createdReservaGuid,
         monto: Number(reservaTotal || 0),
+        tokenPago: `card_${cardNumber.slice(-4)}_${Date.now()}`,
+        referencia: `RES-${createdReservaGuid}-${Date.now()}`,
       } : {
         idReserva: Number(createdReservaId),
         monto: Number(reservaTotal || 0),
+        tokenPago: `card_${cardNumber.slice(-4)}_${Date.now()}`,
+        referencia: `RES-${createdReservaId}-${Date.now()}`,
       }
       const paymentResult = await reservationService.simulatePayment(paymentPayload)
 

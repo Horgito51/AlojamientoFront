@@ -4,6 +4,7 @@ import { reservationService } from '../../api/reservationService'
 import { APP_CONFIG } from '../../config/appConfig'
 import { useAuth } from '../../hooks/useAuth'
 import { showError, showSuccess } from '../../utils/sweetAlert'
+import { isReservableRoomState } from '../../utils/validation'
 import RoomCard from '../../components/marketplace/RoomCard'
 import ReservationSummary from '../../components/marketplace/ReservationSummary'
 import DateRangePicker from '../../components/marketplace/DateRangePicker'
@@ -43,7 +44,7 @@ const MarketplacePage = () => {
         }
         
         const data = await reservationService.getHabitaciones(params)
-        if (alive) setRooms(data)
+        if (alive) setRooms(data.filter((room) => isReservableRoomState(room.estadoHabitacion ?? room.EstadoHabitacion ?? 'DIS')))
       } catch (err) {
         console.error('Rooms error:', err?.response?.data || err)
         if (alive) setError('Error al cargar las habitaciones. Por favor, intenta de nuevo mas tarde.')
@@ -60,6 +61,11 @@ const MarketplacePage = () => {
   }, [dates.checkIn, dates.checkOut])
 
   const handleToggleRoom = (room) => {
+    if (!isReservableRoomState(room.estadoHabitacion ?? room.EstadoHabitacion ?? 'DIS')) {
+      showError('Habitacion no disponible', 'Solo puedes seleccionar habitaciones disponibles.')
+      return
+    }
+
     setSelectedRooms((prev) => {
       const isAlreadySelected = prev.find((r) => r.habitacionGuid === room.habitacionGuid)
       if (isAlreadySelected) return prev.filter((r) => r.habitacionGuid !== room.habitacionGuid)
@@ -168,6 +174,11 @@ const MarketplacePage = () => {
 
     if (selectedRooms.length === 0) {
       showError('Error', 'Selecciona al menos una habitacion.')
+      return false
+    }
+
+    if (selectedRooms.some((room) => !isReservableRoomState(room.estadoHabitacion ?? room.EstadoHabitacion ?? 'DIS'))) {
+      showError('Error', 'Solo puedes reservar habitaciones disponibles.')
       return false
     }
 

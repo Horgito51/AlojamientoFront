@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { adminApi } from '../../api/adminApi'
 import { adminModules } from '../../data/adminModules'
 import { buildFormFromRow, buildInitialForm, coercePayload, getFieldLabel, getOptionLabel, getOptionValue, readValue } from '../../utils/adminModule'
-import { showError, showSuccess } from '../../utils/sweetAlert'
+import { getErrorMessage, showError, showSuccess } from '../../utils/sweetAlert'
 import { useCloudinaryUpload } from '../../hooks/useCloudinaryUpload'
+import { EMAIL_REGEX, PHONE_10_REGEX, isAdult, validateEcuadorIdentification } from '../../utils/validation'
 
 export default function AdminModuleFormPage() {
   const { moduleKey, recordId } = useParams()
@@ -210,6 +211,37 @@ export default function AdminModuleFormPage() {
     )
   }
 
+  const validateBusinessRules = (enrichedForm) => {
+    const correo = String(enrichedForm.correo ?? '').trim()
+    const telefono = String(enrichedForm.telefono ?? '').trim()
+
+    if (correo && !EMAIL_REGEX.test(correo)) {
+      return 'El correo no tiene un formato valido.'
+    }
+
+    if (telefono && !PHONE_10_REGEX.test(telefono)) {
+      return 'El telefono debe contener exactamente 10 digitos.'
+    }
+
+    if (moduleKey === 'clientes') {
+      const idError = validateEcuadorIdentification(enrichedForm.tipoIdentificacion, enrichedForm.numeroIdentificacion)
+      if (idError) return idError
+    }
+
+    if (enrichedForm.fechaNacimiento && !isAdult(enrichedForm.fechaNacimiento, 18)) {
+      return 'El cliente debe tener al menos 18 anios.'
+    }
+
+    if (enrichedForm.edadMinimaHuesped !== undefined && enrichedForm.edadMinimaHuesped !== null && String(enrichedForm.edadMinimaHuesped).trim() !== '') {
+      const edadMinima = Number(enrichedForm.edadMinimaHuesped)
+      if (Number.isNaN(edadMinima) || edadMinima < 18) {
+        return 'La edad minima del huesped debe ser 18 o mayor.'
+      }
+    }
+
+    return ''
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     setError('')
@@ -242,6 +274,14 @@ export default function AdminModuleFormPage() {
         const message = `El campo "${getFieldLabel(invalidNumber)}" debe ser numerico.`
         setError(message)
         await showError('Dato invalido', message)
+        setSaving(false)
+        return
+      }
+
+      const businessRuleError = validateBusinessRules(enrichedForm)
+      if (businessRuleError) {
+        setError(businessRuleError)
+        await showError('Dato invalido', businessRuleError)
         setSaving(false)
         return
       }
@@ -279,7 +319,7 @@ export default function AdminModuleFormPage() {
       )
       navigate(`/admin/${moduleKey}`, { replace: true })
     } catch (err) {
-      const message = err.response?.data?.message || err.response?.data?.error || 'No se pudo guardar el registro.'
+      const message = getErrorMessage(err)
       setError(message)
       await showError('No se pudo guardar', message)
     } finally {
