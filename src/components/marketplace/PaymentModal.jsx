@@ -120,39 +120,48 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   /*  Validaciones de tarjeta                                             */
   /* ------------------------------------------------------------------ */
   const validate = () => {
-    const cardNumber   = card.number.replace(/\D/g, '')
-    const [mm, yy]     = card.expiry.split('/').map(Number)
-    const nowYear      = Number(String(new Date().getFullYear()).slice(-2))
-    const nowMonth     = new Date().getMonth() + 1
+    try {
+      const cardNumber   = (card.number || '').replace(/\D/g, '')
+      const expiry = card.expiry || ''
+      const [mm, yy]     = expiry.split('/').map(Number)
+      const nowYear      = Number(String(new Date().getFullYear()).slice(-2))
+      const nowMonth     = new Date().getMonth() + 1
 
-    if (!card.name.trim()) {
-      setErrorMsg('El nombre del titular es obligatorio.')
+      if (!card.name || !card.name.trim()) {
+        setErrorMsg('El nombre del titular es obligatorio.')
+        return false
+      }
+      if (cardNumber.length !== 16) {
+        setErrorMsg('El número de tarjeta debe tener 16 dígitos.')
+        return false
+      }
+      if (!mm || mm < 1 || mm > 12 || !yy) {
+        setErrorMsg('La fecha de expiración no es válida.')
+        return false
+      }
+      if (yy < nowYear || (yy === nowYear && mm < nowMonth)) {
+        setErrorMsg('La tarjeta ha expirado.')
+        return false
+      }
+      if (!/^\d{3,4}$/.test(card.cvv || '')) {
+        setErrorMsg('El CVC debe tener 3 o 4 dígitos.')
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error('[PaymentModal] Error en validate:', err)
+      setErrorMsg('Error al validar la tarjeta. Por favor revisa los datos.')
       return false
     }
-    if (cardNumber.length !== 16) {
-      setErrorMsg('El número de tarjeta debe tener 16 dígitos.')
-      return false
-    }
-    if (!mm || mm < 1 || mm > 12 || !yy) {
-      setErrorMsg('La fecha de expiración no es válida.')
-      return false
-    }
-    if (yy < nowYear || (yy === nowYear && mm < nowMonth)) {
-      setErrorMsg('La tarjeta ha expirado.')
-      return false
-    }
-    if (!/^\d{3,4}$/.test(card.cvv)) {
-      setErrorMsg('El CVC debe tener 3 o 4 dígitos.')
-      return false
-    }
-    return true
   }
 
   /* ------------------------------------------------------------------ */
   /*  Flujo de pago                                                       */
   /* ------------------------------------------------------------------ */
   const handlePay = async (e) => {
-    e?.preventDefault?.()
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault()
+    }
 
     // Guarda para evitar doble-submit
     if (submitting.current) return
@@ -383,6 +392,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
             {/* Botón de confirmación */}
             <button
               type="submit"
+              onClick={handlePay}
               disabled={submitting.current}
               className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-5 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
