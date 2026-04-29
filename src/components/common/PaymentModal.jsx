@@ -168,9 +168,10 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       }
 
       const idReserva = pickValue(activeReserva, ['IdReserva', 'idReserva', 'id', 'Id']);
+      const reservaGuid = pickValue(activeReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva']);
       const totalToPay = pickValue(activeReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? reserva.reservaPayload?.totals?.total;
 
-      if (!idReserva || !Number(totalToPay)) {
+      if ((!isPublic && !idReserva) || (isPublic && !reservaGuid) || !Number(totalToPay)) {
         throw new Error('No se pudo obtener la reserva o el total a pagar.');
       }
 
@@ -178,16 +179,17 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         await reservasApi.confirmReserva(idReserva);
       }
 
-      const paymentResult = await paymentApi.simularPago(idReserva, totalToPay, isPublic, {
+      const paymentReference = isPublic ? reservaGuid : idReserva;
+      const paymentResult = await paymentApi.simularPago(paymentReference, totalToPay, isPublic, {
         tokenPago: `card_${cardData.number.slice(-4)}_${Date.now()}`,
-        referencia: `RES-${idReserva}-${Date.now()}`,
+        referencia: `RES-${paymentReference}-${Date.now()}`,
       });
       
       if (!isPaymentApproved(paymentResult)) {
         // 3. Si falla, cancelamos
         try {
           if (isPublic) {
-            await reservationService.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
+            await reservationService.cancelPublicReserva(reservaGuid, 'Pago rechazado por la pasarela.');
           } else {
             await reservasApi.cancelReserva(idReserva, 'Pago rechazado por la pasarela.');
           }
@@ -200,10 +202,12 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       }
 
       // 4. Pago exitoso -> Generar Factura
-      try {
-        await paymentApi.generarFactura(idReserva);
-      } catch (err) {
-        console.warn("Invoice generation failed:", err);
+      if (!isPublic) {
+        try {
+          await paymentApi.generarFactura(idReserva);
+        } catch (err) {
+          console.warn("Invoice generation failed:", err);
+        }
       }
 
       // 5. Todo listo

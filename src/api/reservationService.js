@@ -2,7 +2,6 @@ import api from './axiosConfig';
 import { ENDPOINTS } from './endpoints';
 import { normalizeEntity, normalizeList } from './normalize';
 
-const isMissingPublicEndpoint = (error) => [404, 405].includes(error.response?.status);
 const normalizeEmail = (value) => value?.trim().toLowerCase();
 
 export const reservationService = {
@@ -41,31 +40,14 @@ export const reservationService = {
       const { data } = await api.get(ENDPOINTS.PUBLIC.CLIENTES.byEmail(email));
       return normalizeEntity(data);
     } catch (error) {
-      if (!isMissingPublicEndpoint(error)) throw error;
-    }
-
-    try {
-      const { data } = await api.get(ENDPOINTS.INTERNAL.CLIENTES.base, {
-        params: { page: 1, pageSize: 500 },
-      });
-      const clientes = normalizeList(data);
-      return clientes.find((cliente) => normalizeEmail(cliente.correo) === email) || null;
-    } catch (error) {
-      if (error.response?.status === 401) return null;
+      if ([401, 404, 405].includes(error.response?.status)) return null;
       throw error;
     }
   },
 
   async createCliente(clienteData) {
-    try {
-      const { data } = await api.post(ENDPOINTS.PUBLIC.CLIENTES.base, clienteData);
-      return normalizeEntity(data);
-    } catch (error) {
-      if (!isMissingPublicEndpoint(error)) throw error;
-
-      const { data } = await api.post(ENDPOINTS.INTERNAL.CLIENTES.base, clienteData);
-      return normalizeEntity(data);
-    }
+    const { data } = await api.post(ENDPOINTS.PUBLIC.CLIENTES.base, clienteData);
+    return normalizeEntity(data);
   },
 
   async createPublicReserva(reservationData) {
