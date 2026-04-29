@@ -222,6 +222,7 @@ const MarketplacePage = () => {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [pendingPayload, setPendingPayload] = useState(null)
+  const [createdReservationForPayment, setCreatedReservationForPayment] = useState(null)
 
   const handleConfirmReservation = async (event) => {
     event.preventDefault()
@@ -264,7 +265,14 @@ const MarketplacePage = () => {
 
     const payload = buildReservaPayload(clienteGuid)
     setPendingPayload(payload)
-    setShowPaymentModal(true)
+    try {
+      const created = await reservationService.createPublicReserva(payload)
+      setCreatedReservationForPayment(created)
+      setShowPaymentModal(true)
+    } catch (err) {
+      console.error('[MarketplacePage] Error creando reserva antes del pago:', err?.response?.data || err)
+      showError('Error', 'No se pudo crear la reserva antes de abrir el pago.')
+    }
   }
 
   const handlePaymentSuccess = (reserva) => {
@@ -275,6 +283,7 @@ const MarketplacePage = () => {
     setDates({ checkIn: '', checkOut: '' })
     setObservaciones('')
     setPendingPayload(null)
+    setCreatedReservationForPayment(null)
     
     const code = reserva?.codigoReserva || reserva?.CodigoReserva || reserva?.reservaGuid || reserva?.ReservaGuid || 'confirmada'
     showSuccess('Reserva completada', `Tu reserva ha sido pagada y creada correctamente. Codigo: ${code}.`)
@@ -370,10 +379,14 @@ const MarketplacePage = () => {
       {showPaymentModal && pendingPayload && (
         <PaymentModal
           reservationData={pendingPayload}
+          existingReservation={createdReservationForPayment}
           user={user}
           total={totals.total}
           onSuccess={handlePaymentSuccess}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setCreatedReservationForPayment(null)
+          }}
         />
       )}
     </div>

@@ -71,7 +71,7 @@ const isApproved = (result) => {
 // Componente principal
 // ---------------------------------------------------------------------------
 
-export default function PaymentModal({ reservationData, user, total, onSuccess, onClose }) {
+export default function PaymentModal({ reservationData, existingReservation, user, total, onSuccess, onClose }) {
   /* ------------------------------------------------------------------ */
   /*  Estado del formulario                                               */
   /* ------------------------------------------------------------------ */
@@ -173,27 +173,25 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
     setStepMsg('Validando datos...')
     setErrorMsg('')
 
-    let createdGuid = null   // lo guardamos en closure, no en estado React
+    let createdGuid = pick(existingReservation, ['reservaGuid', 'ReservaGuid', 'guidReserva', 'GuidReserva']) || null
+    let reserva = unwrap(existingReservation || null)
+    let reservaTotal = pick(reserva, ['totalReserva', 'TotalReserva', 'total', 'Total']) ?? total
 
     try {
-      // ── 1. Crear la reserva ──────────────────────────────────────────
-      setStepMsg('Creando reserva...')
-      // #region agent log
-      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H8',location:'src/components/marketplace/PaymentModal.jsx:handlePay:beforeCreateReserva',message:'Marketplace payment flow start',data:{apiBaseUrl:API_BASE_URL,reservationKeys:Object.keys(reservationData||{}),hasReservaMoneda:Object.prototype.hasOwnProperty.call(reservationData||{},'moneda'),hasReservaMonedaUpper:Object.prototype.hasOwnProperty.call(reservationData||{},'Moneda')},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      console.log('[PaymentModal] Creando reserva con payload:', reservationData)
-
-      const reservaRaw   = await reservationService.createPublicReserva(reservationData)
-      const reserva      = unwrap(reservaRaw)
-
-      console.log('[PaymentModal] Reserva creada:', reserva)
-
-      createdGuid = pick(reserva, ['reservaGuid', 'ReservaGuid', 'guidReserva', 'GuidReserva'])
-      const reservaTotal = pick(reserva, ['totalReserva', 'TotalReserva', 'total', 'Total']) ?? total
-
+      // ── 1. Resolver reserva (existente o crear nueva) ────────────────
       if (!createdGuid) {
-        throw new Error('El servidor no devolvió el identificador de la reserva. Contacta a soporte.')
+        setStepMsg('Creando reserva...')
+        // #region agent log
+        fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H8',location:'src/components/marketplace/PaymentModal.jsx:handlePay:beforeCreateReserva',message:'Marketplace payment flow start',data:{apiBaseUrl:API_BASE_URL,reservationKeys:Object.keys(reservationData||{}),hasReservaMoneda:Object.prototype.hasOwnProperty.call(reservationData||{},'moneda'),hasReservaMonedaUpper:Object.prototype.hasOwnProperty.call(reservationData||{},'Moneda')},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        console.log('[PaymentModal] Creando reserva con payload:', reservationData)
+        const reservaRaw = await reservationService.createPublicReserva(reservationData)
+        reserva = unwrap(reservaRaw)
+        createdGuid = pick(reserva, ['reservaGuid', 'ReservaGuid', 'guidReserva', 'GuidReserva'])
+        reservaTotal = pick(reserva, ['totalReserva', 'TotalReserva', 'total', 'Total']) ?? total
+        console.log('[PaymentModal] Reserva creada:', reserva)
       }
+      if (!createdGuid) throw new Error('No se pudo obtener el identificador de la reserva para procesar el pago.')
 
       // ── 2. Simular el pago ───────────────────────────────────────────
       setStepMsg('Procesando pago...')
