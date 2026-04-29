@@ -278,8 +278,13 @@ const MarketplacePage = () => {
       // #region agent log
       fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H12',location:'src/pages/marketplace/MarketplacePage.jsx:handleConfirmReservation:catch',message:'Pre-create reservation failed',data:{status:err?.response?.status,errorData:err?.response?.data,errorMessage:err?.response?.data?.message||err?.response?.data?.Message||err?.message},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
-      const backendMessage = err?.response?.data?.message || err?.response?.data?.Message || err?.response?.data?.title || err?.message
-      showError('Error', backendMessage || 'No se pudo crear la reserva antes de abrir el pago.')
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.Message || err?.response?.data?.title || ''
+      const status = err?.response?.status ?? 'N/A'
+      const code = err?.code ?? 'N/A'
+      const url = err?.config?.url ?? 'N/A'
+      const rawMessage = err?.message ?? 'Sin mensaje'
+      const debugMessage = `${backendMessage || 'No se pudo crear la reserva antes de abrir el pago.'}\n\nstatus=${status} code=${code}\nurl=${url}\nmsg=${rawMessage}`
+      showError('Error', debugMessage)
     }
   }
 
