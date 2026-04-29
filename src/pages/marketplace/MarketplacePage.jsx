@@ -274,7 +274,7 @@ const MarketplacePage = () => {
     setObservaciones('')
     setPendingPayload(null)
     
-    const code = reserva?.codigoReserva || reserva?.reservaGuid || 'confirmada'
+    const code = reserva?.codigoReserva || reserva?.CodigoReserva || reserva?.reservaGuid || reserva?.ReservaGuid || 'confirmada'
     showSuccess('Reserva completada', `Tu reserva ha sido pagada y creada correctamente. Codigo: ${code}.`)
   }
 

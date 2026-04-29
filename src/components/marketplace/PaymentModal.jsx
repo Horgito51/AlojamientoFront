@@ -9,9 +9,9 @@ import { getErrorMessage } from '../../utils/sweetAlert'
 
 /** Desenvuelve wrappers anidados que a veces manda el backend */
 const unwrap = (value) => {
-  const WRAPPER_KEYS = ['data', 'result', 'reserva', 'Reserva', 'pago', 'Pago']
+  const WRAPPER_KEYS = ['data', 'result', 'reserva', 'Reserva', 'pago', 'Pago', 'payment', 'Payment', 'entity', 'item']
   let current = value
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     if (!current || typeof current !== 'object') return current
     const key = WRAPPER_KEYS.find((k) => current[k] && typeof current[k] === 'object')
     if (!key) return current
@@ -20,11 +20,19 @@ const unwrap = (value) => {
   return current
 }
 
+const getByKey = (obj, key) => {
+  if (!obj || typeof obj !== 'object') return undefined
+  if (obj[key] !== undefined) return obj[key]
+
+  const match = Object.keys(obj).find((currentKey) => currentKey.toLowerCase() === key.toLowerCase())
+  return match ? obj[match] : undefined
+}
+
 /** Busca el primer valor no-nulo para cualquiera de las claves indicadas */
 const pick = (obj, keys) => {
   const source = unwrap(obj)
   for (const key of keys) {
-    const v = source?.[key] ?? obj?.[key]
+    const v = getByKey(source, key) ?? getByKey(obj, key)
     if (v !== undefined && v !== null && v !== '') return v
   }
   return null
@@ -34,28 +42,26 @@ const pick = (obj, keys) => {
 const isApproved = (result) => {
   const payment = unwrap(result)
   const rawStatus = String(
-    payment?.estadoPago || payment?.EstadoPago || payment?.estado || payment?.Estado || ''
+    pick(payment, ['estadoPago', 'EstadoPago', 'estado', 'Estado', 'status', 'Status', 'state', 'State']) || ''
   ).toUpperCase()
 
-  const REJECTED = ['RECH', 'RECHAZADO', 'DENIED', 'FAILED', 'FAIL', 'ERROR', 'CAN', 'CANCELADO']
-  const APPROVED  = ['APR', 'CON', 'PAG', 'OK', 'PAID', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO']
+  const REJECTED = ['REC', 'RECH', 'RECHAZADO', 'DEN', 'DENIED', 'FAILED', 'FAIL', 'ERROR', 'ERR', 'CAN', 'CANCELADO']
+  const APPROVED  = ['APR', 'CON', 'PAG', 'OK', 'PAID', 'PAGADO', 'APROBADO', 'APPROVED', 'SUCCESS', 'COMPLETADO']
 
   if (
     REJECTED.includes(rawStatus) ||
-    payment?.success === false ||
-    payment?.aprobado === false ||
-    payment?.Aprobado === false
+    pick(payment, ['success', 'Success']) === false ||
+    pick(payment, ['aprobado', 'Aprobado']) === false
   ) return false
 
   const hasEvidence = Boolean(
-    pick(payment, ['idPago', 'IdPago', 'codigoAutorizacion', 'CodigoAutorizacion', 'transaccionExterna', 'TransaccionExterna'])
+    pick(payment, ['idPago', 'IdPago', 'codigoAutorizacion', 'CodigoAutorizacion', 'transaccionExterna', 'TransaccionExterna', 'referencia', 'Referencia'])
   )
 
   return (
     APPROVED.includes(rawStatus) ||
-    payment?.success === true ||
-    payment?.aprobado === true ||
-    payment?.Aprobado === true ||
+    pick(payment, ['success', 'Success']) === true ||
+    pick(payment, ['aprobado', 'Aprobado']) === true ||
     hasEvidence
   )
 }
@@ -200,7 +206,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
           console.error('[PaymentModal] Error en rollback de reserva:', cancelErr)
         }
 
-        const msg = payResult?.mensaje || payResult?.Mensaje || 'El pago fue rechazado. La reserva ha sido cancelada.'
+        const msg = pick(payResult, ['mensaje', 'Mensaje', 'message', 'Message']) || 'El pago fue rechazado. La reserva ha sido cancelada.'
         setErrorMsg(msg)
         setPhase('error')
         return
@@ -211,8 +217,11 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       setStepMsg('')
 
       setTimeout(() => {
-        onClose()
-        onSuccess(reserva)
+        onSuccess?.({
+          ...reserva,
+          pago: unwrap(payResult),
+        })
+        onClose?.()
       }, 1800)
 
     } catch (err) {
@@ -374,11 +383,12 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
             {/* Botón de confirmación */}
             <button
               type="submit"
-              className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-5 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.97]"
+              disabled={submitting.current}
+              className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-5 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <span className="relative z-10 flex items-center justify-center gap-3 text-lg uppercase tracking-wider">
-                Confirmar y Pagar
+                {submitting.current ? 'Procesando...' : 'Confirmar y Pagar'}
                 <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
