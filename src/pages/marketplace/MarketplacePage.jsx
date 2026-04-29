@@ -8,7 +8,6 @@ import { isReservableRoomState } from '../../utils/validation'
 import RoomCard from '../../components/marketplace/RoomCard'
 import ReservationSummary from '../../components/marketplace/ReservationSummary'
 import DateRangePicker from '../../components/marketplace/DateRangePicker'
-import PaymentModal from '../../components/marketplace/PaymentModal'
 
 const money = (value) => Number((Number(value) || 0).toFixed(2))
 const getAppliedPrice = (room) => Number(room.precioNocheAplicado ?? room.PrecioNocheAplicado ?? room.precioBase ?? 0)
@@ -29,7 +28,7 @@ const MarketplacePage = () => {
   const [observaciones, setObservaciones] = useState('')
   const [error, setError] = useState(null)
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' })
-  const [paymentResult, setPaymentResult] = useState(null)
+  const [reservationResult, setReservationResult] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -160,7 +159,6 @@ const MarketplacePage = () => {
     setDates((prev) => ({ ...prev, [name]: value }))
     setShowConfirm(false)
     setSelectedRooms([])
-    setPendingPayload(null)
   }
 
   const validateSelection = () => {
@@ -236,8 +234,6 @@ const MarketplacePage = () => {
     }
   }
 
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [pendingPayload, setPendingPayload] = useState(null)
 
   const handleConfirmReservation = async (event) => {
     event.preventDefault()
@@ -285,32 +281,40 @@ const MarketplacePage = () => {
     }
 
     const payload = buildReservaPayload(clienteGuid)
-    setPendingPayload(payload)
-    setShowPaymentModal(true)
-  }
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H18',location:'src/pages/marketplace/MarketplacePage.jsx:handleConfirmReservation:beforeCreate',message:'Create reservation without immediate payment',data:{payloadKeys:Object.keys(payload||{}),rooms:payload?.habitaciones?.length||0,hasMoneda:Object.prototype.hasOwnProperty.call(payload||{},'moneda')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const createdReserva = await reservationService.createPublicReserva(payload)
+      setReservationResult(createdReserva)
+      setShowConfirm(false)
+      setSelectedRooms([])
+      setDates({ checkIn: '', checkOut: '' })
+      setObservaciones('')
 
-  const handlePaymentSuccess = (reserva) => {
-    setPaymentResult({ success: true })
-    setShowPaymentModal(false)
-    setShowConfirm(false)
-    setSelectedRooms([])
-    setDates({ checkIn: '', checkOut: '' })
-    setObservaciones('')
-    setPendingPayload(null)
-    
-    const code = reserva?.codigoReserva || reserva?.CodigoReserva || reserva?.reservaGuid || reserva?.ReservaGuid || 'confirmada'
-    showSuccess('Reserva completada', `Tu reserva ha sido pagada y creada correctamente. Codigo: ${code}.`)
+      showSuccess(
+        'Felicidades, has generado la reserva',
+        'Tu reserva fue creada exitosamente. Ahora puedes pagarla desde el apartado de pagos. Tienes 3 dias para cancelar sin inconvenientes.'
+      )
+      navigate('/pagos')
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H19',location:'src/pages/marketplace/MarketplacePage.jsx:handleConfirmReservation:catch',message:'Reservation creation failed',data:{status:err?.response?.status,errorMessage:err?.response?.data?.message||err?.response?.data?.Message||err?.message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.Message || 'No se pudo crear la reserva.'
+      showError('Error', backendMessage)
+    }
   }
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-12 dark:bg-black sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        {paymentResult && (
+        {reservationResult && (
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Pago realizado con éxito. Reserva aprobada y confirmada.
+            Reserva creada correctamente. Completa el pago en el apartado Pagos.
           </div>
         )}
 
@@ -389,17 +393,6 @@ const MarketplacePage = () => {
         </div>
       </div>
 
-      {showPaymentModal && pendingPayload && (
-        <PaymentModal
-          reservationData={pendingPayload}
-          user={user}
-          total={totals.total}
-          onSuccess={handlePaymentSuccess}
-          onClose={() => {
-            setShowPaymentModal(false)
-          }}
-        />
-      )}
     </div>
   )
 }
