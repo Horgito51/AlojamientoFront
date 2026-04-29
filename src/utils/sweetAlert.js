@@ -33,12 +33,12 @@ export const themeOptions = () => {
  * Parsea los errores del backend para mostrarlos de forma amigable.
  */
 export const getErrorMessage = (error) => {
-  if (error.isClientInternalAccessBlocked) {
+  if (error?.isClientInternalAccessBlocked) {
     return 'El flujo publico intento acceder a un endpoint administrativo. Recarga la pagina e intenta nuevamente.'
   }
 
-  const data = error.response?.data
-  if (!data) return error.message || 'Ocurrio un error inesperado. Por favor, intenta de nuevo.'
+  const data = error?.response?.data
+  if (!data) return sanitizeErrorMessage(error?.message || 'Ocurrio un error inesperado. Por favor, intenta de nuevo.')
 
   if (data.errors) {
     const errorMessages = Object.entries(data.errors)
@@ -48,15 +48,15 @@ export const getErrorMessage = (error) => {
       })
       .filter(Boolean)
       .join('<br />')
-    return errorMessages
+    return sanitizeErrorMessage(errorMessages)
   }
 
-  if (typeof data.error === 'object') {
-    const message = data.error.message || data.error.mensaje || data.error.detail || data.error.title
-    return appendRequestUrl(message || 'No se pudo procesar la solicitud.', error)
+  if (typeof data.error === 'object' && data.error !== null) {
+    const message = data.error.message || data.error.mensaje || data.error.detail || data.error.title || 'No se pudo procesar la solicitud.'
+    return appendRequestUrl(sanitizeErrorMessage(message), error)
   }
 
-  const rawMessage = data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.';
+  const rawMessage = data.message || data.mensaje || data.error || data.detail || data.title || (typeof data === 'string' ? data : 'No se pudo procesar la solicitud.');
   return appendRequestUrl(sanitizeErrorMessage(rawMessage), error)
 }
 
