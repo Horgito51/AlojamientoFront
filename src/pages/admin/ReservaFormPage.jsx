@@ -109,6 +109,7 @@ export default function ReservaFormPage() {
   // UI
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const isLockedByState = isEdit && String(form.estadoReserva || '').toUpperCase() !== 'PEN'
 
   const getHabitacionOption = (id) => {
     const numericId = Number(id)
@@ -328,6 +329,12 @@ export default function ReservaFormPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (isLockedByState) {
+      const message = `La reserva esta en estado ${String(form.estadoReserva || '').toUpperCase()} y no se puede editar.`
+      setError(message)
+      await showError('Edicion bloqueada', message)
+      return
+    }
 
     // Validaciones
     if (!form.idCliente) return setError('Seleccione un cliente.')
@@ -385,6 +392,11 @@ export default function ReservaFormPage() {
       {error && (
         <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
+        </div>
+      )}
+      {isLockedByState && (
+        <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Esta reserva no es editable por su estado actual ({String(form.estadoReserva || '').toUpperCase()}).
         </div>
       )}
 
@@ -739,7 +751,7 @@ export default function ReservaFormPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || isLockedByState}
               className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
               {saving ? 'Guardando…' : isEdit ? 'Actualizar Reserva' : 'Crear Reserva'}

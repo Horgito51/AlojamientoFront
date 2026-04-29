@@ -89,6 +89,45 @@ const getActionAvailability = (action, row) => {
   return { disabled: false, reason: '' }
 }
 
+const getCrudAvailability = (moduleKey, row) => {
+  if (moduleKey === 'reservas') {
+    const reservaState = normalizeState(readValue(row, 'estadoReserva'))
+    if (reservaState === 'PEN') {
+      return {
+        editDisabled: false,
+        editReason: '',
+        deleteDisabled: false,
+        deleteReason: '',
+      }
+    }
+    return {
+      editDisabled: true,
+      editReason: `No se puede editar una reserva en estado ${reservaState || 'desconocido'}.`,
+      deleteDisabled: true,
+      deleteReason: `No se puede eliminar una reserva en estado ${reservaState || 'desconocido'}.`,
+    }
+  }
+
+  if (moduleKey === 'pagos') {
+    const estadoPago = normalizeState(readValue(row, 'estadoPago'))
+    if (estadoPago === 'APR') {
+      return {
+        editDisabled: true,
+        editReason: 'No se puede editar un pago aprobado.',
+        deleteDisabled: true,
+        deleteReason: 'No se puede eliminar un pago aprobado.',
+      }
+    }
+  }
+
+  return {
+    editDisabled: false,
+    editReason: '',
+    deleteDisabled: false,
+    deleteReason: '',
+  }
+}
+
 export default function AdminModulePage() {
   const { moduleKey } = useParams()
   const navigate = useNavigate()
@@ -268,6 +307,7 @@ export default function AdminModulePage() {
 
   const renderActions = (row) => {
     const id = getRowId(row)
+    const crudAvailability = getCrudAvailability(moduleKey, row)
 
     return (
       <div className="flex flex-wrap justify-end gap-2">
@@ -297,8 +337,9 @@ export default function AdminModulePage() {
           <button
             type="button"
             onClick={() => navigate(`/admin/${moduleKey}/${id}/editar`, { state: { row } })}
-            className="admin-action-button admin-action-edit"
-            title="Editar registro"
+            disabled={crudAvailability.editDisabled}
+            className="admin-action-button admin-action-edit disabled:cursor-not-allowed disabled:opacity-50"
+            title={crudAvailability.editReason || 'Editar registro'}
           >
             <ActionIcon name="edit" />
             <span>Editar</span>
@@ -308,8 +349,9 @@ export default function AdminModulePage() {
           <button
             type="button"
             onClick={() => remove(row)}
-            className="admin-action-button admin-action-delete"
-            title="Eliminar registro"
+            disabled={crudAvailability.deleteDisabled}
+            className="admin-action-button admin-action-delete disabled:cursor-not-allowed disabled:opacity-50"
+            title={crudAvailability.deleteReason || 'Eliminar registro'}
           >
             <ActionIcon name="delete" />
             <span>Eliminar</span>
