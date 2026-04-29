@@ -202,6 +202,7 @@ const MarketplacePage = () => {
       sucursalGuid,
       fechaInicio,
       fechaFin,
+      moneda: 'USD',
       descuentoAplicado: 0,
       observaciones: observaciones.trim(),
       esWalkin: false,

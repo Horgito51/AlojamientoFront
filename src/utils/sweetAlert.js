@@ -56,7 +56,17 @@ export const getErrorMessage = (error) => {
     return appendRequestUrl(message || 'No se pudo procesar la solicitud.', error)
   }
 
-  return appendRequestUrl(data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.', error)
+  const rawMessage = data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.';
+  return appendRequestUrl(sanitizeErrorMessage(rawMessage), error)
+}
+
+const sanitizeErrorMessage = (message) => {
+  if (typeof message !== 'string') return message;
+  const lowerMsg = message.toLowerCase();
+  if (lowerMsg.includes('tabla') || lowerMsg.includes('sql') || lowerMsg.includes('database') || lowerMsg.includes('foreign key') || lowerMsg.includes('.dbo.')) {
+    return 'Ocurrió un error interno en el servidor al procesar los datos. Por favor, contacta a soporte si el problema persiste.';
+  }
+  return message;
 }
 
 const appendRequestUrl = (message, error) => {

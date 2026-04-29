@@ -198,6 +198,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       const payloadPago = {
         reservaGuid : createdGuid,
         monto       : Number(reservaTotal) || 0,
+        moneda      : 'USD',
         tokenPago   : `card_${cardNumber.slice(-4)}_${Date.now()}`,
         referencia  : `RES-${createdGuid}-${Date.now()}`,
       }
