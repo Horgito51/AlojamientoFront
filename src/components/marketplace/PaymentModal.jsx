@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { reservationService } from '../../api/reservationService'
 import { Modal } from '../common/Modal'
-import { getErrorMessage } from '../../utils/sweetAlert'
+import { getErrorMessage, sanitizeErrorMessage } from '../../utils/sweetAlert'
 
 // ---------------------------------------------------------------------------
 // Helpers – no dependen de estado React, son funciones puras
@@ -199,6 +199,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
         reservaGuid : createdGuid,
         monto       : Number(reservaTotal) || 0,
         moneda      : 'USD',
+        Moneda      : 'USD',
         tokenPago   : `card_${cardNumber.slice(-4)}_${Date.now()}`,
         referencia  : `RES-${createdGuid}-${Date.now()}`,
       }
@@ -216,7 +217,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
           console.error('[PaymentModal] Error en rollback de reserva:', cancelErr)
         }
 
-        const msg = pick(payResult, ['mensaje', 'Mensaje', 'message', 'Message']) || 'El pago fue rechazado. La reserva ha sido cancelada.'
+        let msg = pick(payResult, ['mensaje', 'Mensaje', 'message', 'Message']) || 'El pago fue rechazado. La reserva ha sido cancelada.'
+        msg = sanitizeErrorMessage(msg)
         setErrorMsg(msg)
         setPhase('error')
         return

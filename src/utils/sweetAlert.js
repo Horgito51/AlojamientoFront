@@ -60,7 +60,7 @@ export const getErrorMessage = (error) => {
   return appendRequestUrl(sanitizeErrorMessage(rawMessage), error)
 }
 
-const sanitizeErrorMessage = (message) => {
+export const sanitizeErrorMessage = (message) => {
   if (typeof message !== 'string') return message;
   const lowerMsg = message.toLowerCase();
   if (lowerMsg.includes('tabla') || lowerMsg.includes('sql') || lowerMsg.includes('database') || lowerMsg.includes('foreign key') || lowerMsg.includes('.dbo.')) {

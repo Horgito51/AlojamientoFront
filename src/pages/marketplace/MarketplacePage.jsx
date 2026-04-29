@@ -203,6 +203,7 @@ const MarketplacePage = () => {
       fechaInicio,
       fechaFin,
       moneda: 'USD',
+      Moneda: 'USD',
       descuentoAplicado: 0,
       observaciones: observaciones.trim(),
       esWalkin: false,
