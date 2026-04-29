@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { reservationService } from '../../api/reservationService'
+import { API_BASE_URL } from '../../api/axiosConfig'
 import { APP_CONFIG } from '../../config/appConfig'
 import { useAuth } from '../../hooks/useAuth'
 import { showError, showSuccess } from '../../utils/sweetAlert'
@@ -266,12 +267,19 @@ const MarketplacePage = () => {
     const payload = buildReservaPayload(clienteGuid)
     setPendingPayload(payload)
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H11',location:'src/pages/marketplace/MarketplacePage.jsx:handleConfirmReservation:beforeCreate',message:'Pre-create reservation before payment',data:{apiBaseUrl:API_BASE_URL,payloadKeys:Object.keys(payload||{}),habitacionesCount:payload?.habitaciones?.length||0,hasMoneda:Object.prototype.hasOwnProperty.call(payload||{},'moneda')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const created = await reservationService.createPublicReserva(payload)
       setCreatedReservationForPayment(created)
       setShowPaymentModal(true)
     } catch (err) {
       console.error('[MarketplacePage] Error creando reserva antes del pago:', err?.response?.data || err)
-      showError('Error', 'No se pudo crear la reserva antes de abrir el pago.')
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H12',location:'src/pages/marketplace/MarketplacePage.jsx:handleConfirmReservation:catch',message:'Pre-create reservation failed',data:{status:err?.response?.status,errorData:err?.response?.data,errorMessage:err?.response?.data?.message||err?.response?.data?.Message||err?.message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.Message || err?.response?.data?.title || err?.message
+      showError('Error', backendMessage || 'No se pudo crear la reserva antes de abrir el pago.')
     }
   }
 
