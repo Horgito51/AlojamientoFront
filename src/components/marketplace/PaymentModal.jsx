@@ -185,10 +185,18 @@ export default function PaymentModal({ reservationData, existingReservation, use
       const payloadPago = {
         reservaGuid : createdGuid,
         monto       : Number(reservaTotal) || 0,
-        moneda      : 'USD',
-        Moneda      : 'USD',
+        metodoPago  : 'TARJETA',
+        esPagoElectronico: true,
+        proveedorPasarela: 'EXTERNAL',
+        transaccionExterna: null,
+        codigoAutorizacion: null,
         tokenPago   : `sim_${tokenSuffix}_${Date.now()}`,
         referencia  : `RES-${createdGuid}-${Date.now()}`,
+        estadoPago  : 'PEN',
+        fechaPagoUtc: new Date().toISOString(),
+        moneda      : 'USD',
+        tipoCambio  : 1,
+        respuestaPasarela: 'SIM_REQUEST_PUBLIC',
       }
       // #region agent log
       fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H9',location:'src/components/marketplace/PaymentModal.jsx:handlePay:beforeSimulatePayment',message:'Marketplace payment payload',data:{payloadKeys:Object.keys(payloadPago||{}),hasMoneda:Object.prototype.hasOwnProperty.call(payloadPago||{},'moneda'),hasMonedaUpper:Object.prototype.hasOwnProperty.call(payloadPago||{},'Moneda'),monto:payloadPago.monto},timestamp:Date.now()})}).catch(()=>{});
@@ -240,7 +248,20 @@ export default function PaymentModal({ reservationData, existingReservation, use
       }
 
       setPhase('error')
-      setErrorMsg(toPlainTextMessage(getErrorMessage(err)))
+      const backendRawMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.Message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        err?.message
+      const traceId = err?.response?.data?.traceId || err?.response?.data?.TraceId
+      const statusCode = err?.response?.status || err?.response?.data?.statusCode
+      const composed = [
+        backendRawMessage || getErrorMessage(err),
+        statusCode ? `Codigo HTTP: ${statusCode}` : '',
+        traceId ? `Codigo de seguimiento: ${traceId}` : '',
+      ].filter(Boolean).join('\n')
+      setErrorMsg(toPlainTextMessage(composed))
     } finally {
       submitting.current = false
     }
