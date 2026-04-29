@@ -340,10 +340,10 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
               </div>
             )}
 
-            <button type="submit" className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-4 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50" disabled={loading}>
+            <button type="button" onClick={handlePayment} className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-4 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50" disabled={loading}>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <span className="relative z-10 flex items-center justify-center gap-2 text-sm uppercase tracking-widest">
-                {loading ? 'PROCESANDO...' : `PAGAR $${reserva.totalReserva || reserva.total || reserva.reservaPayload?.totals?.total}`}
+                {loading ? 'PROCESANDO PAGO...' : `PAGAR $${reserva.totalReserva || reserva.total || reserva.reservaPayload?.totals?.total}`}
               </span>
             </button>
             

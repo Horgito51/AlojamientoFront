@@ -12,6 +12,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   })
   const [cardType, setCardType] = useState('visa')
   const [status, setStatus] = useState('idle') 
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stepMessage, setStepMessage] = useState('')
   const [error, setError] = useState('')
 
   const unwrapEntity = (value) => {
@@ -105,6 +107,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   const pay = async (event) => {
     event.preventDefault()
 
+    if (isSubmitting) return
+
     const cardNumber = card.number.replace(/\D/g, '')
     const [expiryMonth, expiryYear] = card.expiry.split('/').map((item) => Number(item))
     const currentYear = Number(String(new Date().getFullYear()).slice(-2))
@@ -125,13 +129,16 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       return
     }
 
+    setIsSubmitting(true)
     setStatus('processing')
+    setStepMessage('Validando datos de la reserva...')
     setError('')
     
     let createdReservaGuid = null
     
     try {
       // 1. Crear la reserva PRIMERO para obtener un ID real
+      setStepMessage('Creando reserva publica...')
       const createdReserva = unwrapEntity(await reservationService.createPublicReserva(reservationData))
       
       createdReservaGuid = pickValue(createdReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva'])
@@ -148,6 +155,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
         tokenPago: `card_${cardNumber.slice(-4)}_${Date.now()}`,
         referencia: `RES-${createdReservaGuid}-${Date.now()}`,
       }
+      setStepMessage('Procesando pago publico...')
       const paymentResult = await reservationService.simulatePayment(paymentPayload)
 
       if (!isPaymentApproved(paymentResult)) {
@@ -165,6 +173,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
 
       // 4. Éxito total
       setStatus('success')
+      setStepMessage('')
       setTimeout(() => {
         onClose()
         onSuccess(createdReserva)
@@ -182,6 +191,8 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
 
       setStatus('error')
       setError(getErrorMessage(err))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -202,7 +213,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
           <div className="py-12 text-center">
             <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600 dark:border-slate-800 dark:border-t-indigo-500"></div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Procesando</h3>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Creando reserva y validando pago...</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{stepMessage || 'Creando reserva y validando pago...'}</p>
           </div>
         ) : (
           <form onSubmit={pay} className="space-y-6">
@@ -305,13 +316,14 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
             )}
 
             <button 
-              type="submit" 
-              disabled={status === 'processing'} 
+              type="button"
+              onClick={pay}
+              disabled={isSubmitting} 
               className="group relative w-full overflow-hidden rounded-[2rem] bg-indigo-600 py-5 font-black text-white transition-all hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-50"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <span className="relative z-10 flex items-center justify-center gap-3 text-lg uppercase tracking-wider">
-                Confirmar y Pagar
+                {isSubmitting ? 'Procesando pago...' : 'Confirmar y Pagar'}
                 <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
