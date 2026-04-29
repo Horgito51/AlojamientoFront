@@ -124,6 +124,7 @@ export default function Register() {
         user: {
           id: authData?.usuarioGuid,
           idCliente: authData?.idCliente,
+          clienteGuid: authData?.clienteGuid ?? authData?.ClienteGuid,
         },
       }
 

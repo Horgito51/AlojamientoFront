@@ -22,7 +22,7 @@ const ReservationSummary = ({ selectedRooms, nights, onConfirm, loading, totals,
               <div>
                 <span className="font-medium text-slate-700 dark:text-slate-300">Habitacion {room.numeroHabitacion}</span>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {room.origenPrecio === 'TARIFA' ? `Tarifa #${room.idTarifa}` : 'Precio base'}
+                  {room.origenPrecio === 'TARIFA' ? 'Tarifa aplicada automaticamente' : 'Precio base'}
                 </p>
               </div>
               <span className="shrink-0 text-slate-500 dark:text-slate-400">

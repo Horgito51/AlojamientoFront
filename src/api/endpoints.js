@@ -118,6 +118,7 @@ export const ENDPOINTS = {
     RESERVAS: {
       base: `api/v1/public/reservas`,
       calcularPrecio: `api/v1/public/reservas/calcular-precio`,
+      cancelar: (reservaGuid) => `api/v1/public/reservas/${reservaGuid}/cancelar`,
     },
     PAGOS: {
       simular: `api/v1/public/pagos/simular`,

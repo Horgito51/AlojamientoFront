@@ -108,7 +108,8 @@ export default function Login({ onLoginSuccess }) {
         refreshToken: auth?.refreshToken ?? auth?.refresh_token ?? '',
         roles: auth?.roles ?? [],
         user: {
-          idCliente: auth?.idCliente
+          idCliente: auth?.idCliente,
+          clienteGuid: auth?.clienteGuid ?? auth?.ClienteGuid,
         }
       }
 

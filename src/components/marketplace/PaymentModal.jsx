@@ -128,38 +128,32 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
     setStatus('processing')
     setError('')
     
-    let createdReservaId = null
+    let createdReservaGuid = null
     
     try {
       // 1. Crear la reserva PRIMERO para obtener un ID real
       const createdReserva = unwrapEntity(await reservationService.createPublicReserva(reservationData))
       
-      const createdReservaGuid = pickValue(createdReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva'])
-      createdReservaId = pickValue(createdReserva, ['IdReserva', 'idReserva', 'id', 'Id'])
+      createdReservaGuid = pickValue(createdReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva'])
       const reservaTotal = pickValue(createdReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? total
 
-      if (!createdReservaId && !createdReservaGuid) {
+      if (!createdReservaGuid) {
         throw new Error('No se pudo obtener el identificador de la reserva. Por favor, contacta a soporte.')
       }
 
-      // 2. Simular el pago con el ID real
-      const paymentPayload = createdReservaGuid ? {
+      // 2. Simular el pago con el GUID publico de la reserva
+      const paymentPayload = {
         reservaGuid: createdReservaGuid,
         monto: Number(reservaTotal || 0),
         tokenPago: `card_${cardNumber.slice(-4)}_${Date.now()}`,
         referencia: `RES-${createdReservaGuid}-${Date.now()}`,
-      } : {
-        idReserva: Number(createdReservaId),
-        monto: Number(reservaTotal || 0),
-        tokenPago: `card_${cardNumber.slice(-4)}_${Date.now()}`,
-        referencia: `RES-${createdReservaId}-${Date.now()}`,
       }
       const paymentResult = await reservationService.simulatePayment(paymentPayload)
 
       if (!isPaymentApproved(paymentResult)) {
         // 3. Si el pago falla, CANCELAMOS la reserva creada (Rollback atómico)
         try {
-          await reservationService.cancelReserva(createdReservaId, 'Pago rechazado o cancelado en pasarela.')
+          await reservationService.cancelPublicReserva(createdReservaGuid, 'Pago rechazado o cancelado en pasarela.')
         } catch (cancelErr) {
           console.error('Error in rollback:', cancelErr)
         }
@@ -180,9 +174,9 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       console.error('Payment/Reservation error:', err)
       
       // Si ya se había creado la reserva pero falló algo después, intentamos cancelar
-      if (createdReservaId && status !== 'success') {
+      if (createdReservaGuid && status !== 'success') {
         try {
-          await reservationService.cancelReserva(createdReservaId, 'Error técnico durante el proceso de pago.')
+          await reservationService.cancelPublicReserva(createdReservaGuid, 'Error tecnico durante el proceso de pago.')
         } catch { /* ignore */ }
       }
 

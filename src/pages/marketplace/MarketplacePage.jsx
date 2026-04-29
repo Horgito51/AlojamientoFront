@@ -11,16 +11,15 @@ import DateRangePicker from '../../components/marketplace/DateRangePicker'
 import PaymentModal from '../../components/marketplace/PaymentModal'
 
 const money = (value) => Number((Number(value) || 0).toFixed(2))
-const getRoomId = (room) => Number(room.idHabitacion ?? room.IdHabitacion ?? room.id ?? room.Id)
-const getRoomSucursalId = (room) => Number(room.idSucursal ?? room.IdSucursal ?? room.sucursalId ?? APP_CONFIG.DEFAULT_SUCURSAL_ID)
 const getAppliedPrice = (room) => Number(room.precioNocheAplicado ?? room.PrecioNocheAplicado ?? room.precioBase ?? 0)
 const toApiDate = (value) => `${value}T00:00:00`
+const pickGuid = (source, keys) => keys.map((key) => source?.[key]).find((value) => typeof value === 'string' && value)
 
 const MarketplacePage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, auth } = useAuth()
-  const user = auth?.user ?? auth ?? {}
+  const user = { ...(auth ?? {}), ...(auth?.user ?? {}) }
   const [rooms, setRooms] = useState([])
   const [selectedRooms, setSelectedRooms] = useState([])
   const [loading, setLoading] = useState(true)
@@ -109,9 +108,6 @@ const MarketplacePage = () => {
 
             return {
               ...room,
-              idHabitacion: price.idHabitacion ?? price.IdHabitacion ?? room.idHabitacion,
-              idSucursal: price.idSucursal ?? price.IdSucursal ?? room.idSucursal,
-              idTarifa: price.idTarifa ?? price.IdTarifa ?? null,
               precioNocheAplicado: money(price.precioNocheAplicado ?? price.PrecioNocheAplicado ?? room.precioBase),
               subtotalLinea: money(price.subtotalLinea ?? price.SubtotalLinea ?? 0),
               valorIvaLinea: money(price.valorIvaLinea ?? price.ValorIvaLinea ?? 0),
@@ -196,42 +192,27 @@ const MarketplacePage = () => {
     setShowConfirm(true)
   }
 
-  const buildReservaPayload = () => {
+  const buildReservaPayload = (clienteGuid) => {
     const fechaInicio = toApiDate(dates.checkIn)
     const fechaFin = toApiDate(dates.checkOut)
+    const sucursalGuid = pickGuid(selectedRooms[0], ['sucursalGuid', 'SucursalGuid'])
 
     return {
-      idCliente: Number(user?.idCliente || user?.id || 0),
-      idSucursal: getRoomSucursalId(selectedRooms[0]) || APP_CONFIG.DEFAULT_SUCURSAL_ID,
+      clienteGuid,
+      sucursalGuid,
       fechaInicio,
       fechaFin,
-      subtotalReserva: totals.subtotal,
-      valorIva: totals.iva,
-      totalReserva: totals.total,
       descuentoAplicado: 0,
-      saldoPendiente: totals.pending,
-      origenCanalReserva: APP_CONFIG.CANAL_RESERVA,
-      estadoReserva: APP_CONFIG.ESTADO_RESERVA_INICIAL,
       observaciones: observaciones.trim(),
       esWalkin: false,
       habitaciones: selectedRooms.map((room) => {
-        const precioNocheAplicado = money(getAppliedPrice(room))
-        const subtotalLinea = money(precioNocheAplicado * nights)
-        const valorIvaLinea = money(room.valorIvaLinea ?? subtotalLinea * APP_CONFIG.IVA_PERCENTAGE)
-
         return {
-          idHabitacion: getRoomId(room),
-          idTarifa: room.idTarifa ?? null,
+          habitacionGuid: pickGuid(room, ['habitacionGuid', 'HabitacionGuid']),
           fechaInicio,
           fechaFin,
           numAdultos: 1,
           numNinos: 0,
-          precioNocheAplicado,
-          subtotalLinea,
-          valorIvaLinea,
           descuentoLinea: 0,
-          totalLinea: money(subtotalLinea + valorIvaLinea),
-          estadoDetalle: APP_CONFIG.ESTADO_RESERVA_INICIAL,
         }
       }),
     }
@@ -240,7 +221,7 @@ const MarketplacePage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [pendingPayload, setPendingPayload] = useState(null)
 
-  const handleConfirmReservation = (event) => {
+  const handleConfirmReservation = async (event) => {
     event.preventDefault()
     if (!validateSelection()) return
     if (!isAuthenticated()) {
@@ -248,12 +229,38 @@ const MarketplacePage = () => {
       return
     }
 
-    const payload = buildReservaPayload()
-    const hasUnpricedRooms = payload.habitaciones.some((room) => !Number(room.precioNocheAplicado))
+    const hasUnpricedRooms = selectedRooms.some((room) => !Number(getAppliedPrice(room)))
     if (pricingLoading || hasUnpricedRooms) {
       showError('Error', 'Espera a que se calcule el precio aplicado antes de confirmar.')
       return
     }
+
+    let clienteGuid = pickGuid(user, ['clienteGuid', 'ClienteGuid'])
+    if (!clienteGuid) {
+      try {
+        const cliente = await reservationService.findClienteByEmail(user.email || user.correo)
+        clienteGuid = pickGuid(cliente, ['clienteGuid', 'ClienteGuid'])
+      } catch (error) {
+        console.error('Cliente lookup error:', error?.response?.data || error)
+      }
+    }
+
+    if (!clienteGuid) {
+      showError('Error', 'No se pudo identificar tu perfil de cliente. Cierra sesion e inicia nuevamente.')
+      return
+    }
+
+    if (selectedRooms.some((room) => !pickGuid(room, ['habitacionGuid', 'HabitacionGuid']))) {
+      showError('Error', 'No se pudo identificar una de las habitaciones seleccionadas.')
+      return
+    }
+
+    if (!pickGuid(selectedRooms[0], ['sucursalGuid', 'SucursalGuid'])) {
+      showError('Error', 'No se pudo identificar la sucursal de la reserva.')
+      return
+    }
+
+    const payload = buildReservaPayload(clienteGuid)
     setPendingPayload(payload)
     setShowPaymentModal(true)
   }
@@ -267,7 +274,7 @@ const MarketplacePage = () => {
     setObservaciones('')
     setPendingPayload(null)
     
-    const code = reserva?.codigoReserva || reserva?.idReserva || 'confirmada'
+    const code = reserva?.codigoReserva || reserva?.reservaGuid || 'confirmada'
     showSuccess('Reserva completada', `Tu reserva ha sido pagada y creada correctamente. Codigo: ${code}.`)
   }
 
