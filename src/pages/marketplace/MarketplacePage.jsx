@@ -15,6 +15,7 @@ const money = (value) => Number((Number(value) || 0).toFixed(2))
 const getAppliedPrice = (room) => Number(room.precioNocheAplicado ?? room.PrecioNocheAplicado ?? room.precioBase ?? 0)
 const toApiDate = (value) => `${value}T00:00:00`
 const pickGuid = (source, keys) => keys.map((key) => source?.[key]).find((value) => typeof value === 'string' && value)
+const getBranchGuid = (room) => pickGuid(room, ['sucursalGuid', 'SucursalGuid'])
 
 const MarketplacePage = () => {
   const navigate = useNavigate()
@@ -66,9 +67,22 @@ const MarketplacePage = () => {
       return
     }
 
+    const roomBranchGuid = getBranchGuid(room)
+    if (!roomBranchGuid) {
+      showError('Error', 'No se pudo identificar la sucursal de la habitacion seleccionada.')
+      return
+    }
+
     setSelectedRooms((prev) => {
       const isAlreadySelected = prev.find((r) => r.habitacionGuid === room.habitacionGuid)
       if (isAlreadySelected) return prev.filter((r) => r.habitacionGuid !== room.habitacionGuid)
+      if (prev.length > 0) {
+        const selectedBranchGuid = getBranchGuid(prev[0])
+        if (selectedBranchGuid && selectedBranchGuid !== roomBranchGuid) {
+          showError('Sucursales incompatibles', 'Solo puedes reservar habitaciones de la misma sucursal en una sola reserva.')
+          return prev
+        }
+      }
       return [...prev, room]
     })
   }
@@ -146,6 +160,9 @@ const MarketplacePage = () => {
     const { name, value } = event.target
     setDates((prev) => ({ ...prev, [name]: value }))
     setShowConfirm(false)
+    setSelectedRooms([])
+    setPendingPayload(null)
+    setCreatedReservationForPayment(null)
   }
 
   const validateSelection = () => {
@@ -259,8 +276,14 @@ const MarketplacePage = () => {
       return
     }
 
-    if (!pickGuid(selectedRooms[0], ['sucursalGuid', 'SucursalGuid'])) {
+    const selectedBranchGuid = getBranchGuid(selectedRooms[0])
+    if (!selectedBranchGuid) {
       showError('Error', 'No se pudo identificar la sucursal de la reserva.')
+      return
+    }
+
+    if (selectedRooms.some((room) => getBranchGuid(room) !== selectedBranchGuid)) {
+      showError('Error', 'Todas las habitaciones de la reserva deben pertenecer a la misma sucursal.')
       return
     }
 
@@ -281,9 +304,8 @@ const MarketplacePage = () => {
       const backendMessage = err?.response?.data?.message || err?.response?.data?.Message || err?.response?.data?.title || ''
       const status = err?.response?.status ?? 'N/A'
       const code = err?.code ?? 'N/A'
-      const url = err?.config?.url ?? 'N/A'
       const rawMessage = err?.message ?? 'Sin mensaje'
-      const debugMessage = `${backendMessage || 'No se pudo crear la reserva antes de abrir el pago.'}\n\nstatus=${status} code=${code}\nurl=${url}\nmsg=${rawMessage}`
+      const debugMessage = `${backendMessage || 'No se pudo crear la reserva antes de abrir el pago.'}\n\nstatus=${status} code=${code}\nmsg=${rawMessage}`
       showError('Error', debugMessage)
     }
   }
