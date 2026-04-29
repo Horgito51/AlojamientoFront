@@ -105,7 +105,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
   }
 
   const pay = async (event) => {
-    event.preventDefault()
+    event?.preventDefault?.()
 
     if (isSubmitting) return
 
@@ -216,7 +216,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{stepMessage || 'Creando reserva y validando pago...'}</p>
           </div>
         ) : (
-          <form onSubmit={pay} className="space-y-6">
+          <div className="space-y-6">
             {/* Summary Box with premium aesthetics */}
             <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 p-8 shadow-2xl shadow-indigo-500/30 dark:from-indigo-500 dark:to-violet-600">
               <div className="relative z-10 flex items-center justify-between">
@@ -336,7 +336,7 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
               </svg>
               Pago Encriptado AES-256
             </p>
-          </form>
+          </div>
         )}
       </div>
     </Modal>

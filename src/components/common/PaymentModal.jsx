@@ -96,7 +96,7 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
   }
 
   const handlePayment = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     const [expiryMonth, expiryYear] = cardData.expiry.split('/').map((item) => Number(item));
     const currentYear = Number(String(new Date().getFullYear()).slice(-2));
     const currentMonth = new Date().getMonth() + 1;
