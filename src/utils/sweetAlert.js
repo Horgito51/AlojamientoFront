@@ -33,6 +33,10 @@ export const themeOptions = () => {
  * Parsea los errores del backend para mostrarlos de forma amigable.
  */
 export const getErrorMessage = (error) => {
+  if (error.isClientInternalAccessBlocked) {
+    return 'El flujo publico intento acceder a un endpoint administrativo. Recarga la pagina e intenta nuevamente.'
+  }
+
   const data = error.response?.data
   if (!data) return error.message || 'Ocurrio un error inesperado. Por favor, intenta de nuevo.'
 
@@ -48,10 +52,17 @@ export const getErrorMessage = (error) => {
   }
 
   if (typeof data.error === 'object') {
-    return data.error.message || data.error.mensaje || data.error.detail || data.error.title || 'No se pudo procesar la solicitud.'
+    const message = data.error.message || data.error.mensaje || data.error.detail || data.error.title
+    return appendRequestUrl(message || 'No se pudo procesar la solicitud.', error)
   }
 
-  return data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.'
+  return appendRequestUrl(data.message || data.mensaje || data.error || data.detail || data.title || 'No se pudo procesar la solicitud.', error)
+}
+
+const appendRequestUrl = (message, error) => {
+  const url = error.config?.url
+  if (!url || !String(message).includes('Acceso denegado')) return message
+  return `${message}<br /><span class="text-xs opacity-80">Endpoint: ${url}</span>`
 }
 
 export const showSuccess = (title, text) =>

@@ -18,20 +18,6 @@ export const reservationService = {
     }
   },
 
-  /**
-   * Crea una nueva reserva
-   * @param {Object} reservationData 
-   */
-  async createReserva(reservationData) {
-    try {
-      const { data } = await api.post(ENDPOINTS.INTERNAL.RESERVAS.base, reservationData);
-      return data;
-    } catch (error) {
-      console.error('Error creating reservation:', error);
-      throw error;
-    }
-  },
-
   async findClienteByEmail(correo) {
     const email = normalizeEmail(correo);
     if (!email) return null;
@@ -80,9 +66,5 @@ export const reservationService = {
 
   async cancelPublicReserva(reservaGuid, motivo) {
     await api.patch(ENDPOINTS.PUBLIC.RESERVAS.cancelar(reservaGuid), { motivo });
-  },
-
-  async cancelReserva(id, motivo) {
-    await api.patch(ENDPOINTS.INTERNAL.RESERVAS.cancelar(id), { motivo });
   }
 };
