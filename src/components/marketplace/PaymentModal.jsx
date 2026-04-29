@@ -257,7 +257,7 @@ export default function PaymentModal({ reservationData, existingReservation, use
       }
 
       setPhase('error')
-      setErrorMsg(sanitizeErrorMessage(err?.response?.data?.message || err?.response?.data?.Message || getErrorMessage(err)))
+      setErrorMsg(getErrorMessage(err))
     } finally {
       submitting.current = false
     }
