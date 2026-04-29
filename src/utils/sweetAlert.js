@@ -53,11 +53,11 @@ export const getErrorMessage = (error) => {
 
   if (typeof data.error === 'object' && data.error !== null) {
     const message = data.error.message || data.error.mensaje || data.error.detail || data.error.title || 'No se pudo procesar la solicitud.'
-    return appendRequestUrl(sanitizeErrorMessage(message), error)
+    return appendTraceId(sanitizeErrorMessage(message), data, error)
   }
 
   const rawMessage = data.message || data.mensaje || data.error || data.detail || data.title || (typeof data === 'string' ? data : 'No se pudo procesar la solicitud.');
-  return appendRequestUrl(sanitizeErrorMessage(rawMessage), error)
+  return appendTraceId(sanitizeErrorMessage(rawMessage), data, error)
 }
 
 export const sanitizeErrorMessage = (message) => {
@@ -69,10 +69,10 @@ export const sanitizeErrorMessage = (message) => {
   return message;
 }
 
-const appendRequestUrl = (message, error) => {
-  const url = error.config?.url
-  if (!url || !String(message).includes('Acceso denegado')) return message
-  return `${message}<br /><span class="text-xs opacity-80">Endpoint: ${url}</span>`
+const appendTraceId = (message, data, error) => {
+  const traceId = data?.traceId || data?.TraceId || error?.response?.headers?.['x-trace-id']
+  if (!traceId) return message
+  return `${message}<br /><span class="text-xs opacity-80">Codigo de seguimiento: ${traceId}</span>`
 }
 
 export const showSuccess = (title, text) =>
