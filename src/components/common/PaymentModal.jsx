@@ -170,6 +170,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       const idReserva = pickValue(activeReserva, ['IdReserva', 'idReserva', 'id', 'Id']);
       const reservaGuid = pickValue(activeReserva, ['ReservaGuid', 'reservaGuid', 'guidReserva', 'GuidReserva']);
       const totalToPay = pickValue(activeReserva, ['TotalReserva', 'totalReserva', 'total', 'Total']) ?? reserva.reservaPayload?.totals?.total;
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H3',location:'src/components/common/PaymentModal.jsx:handlePayment:reservationResolved',message:'Reservation identifiers before payment',data:{isPublic,idReserva,reservaGuid,totalToPay,totalType:typeof totalToPay},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       if ((!isPublic && !idReserva) || (isPublic && !reservaGuid) || !Number(totalToPay)) {
         throw new Error('No se pudo obtener la reserva o el total a pagar.');
@@ -184,6 +187,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
         tokenPago: `card_${cardData.number.slice(-4)}_${Date.now()}`,
         referencia: `RES-${paymentReference}-${Date.now()}`,
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H4',location:'src/components/common/PaymentModal.jsx:handlePayment:paymentResult',message:'Payment result summary',data:{paymentStatus:getPaymentStatus(paymentResult),approved:isPaymentApproved(paymentResult),resultKeys:Object.keys((paymentResult&&typeof paymentResult==='object')?paymentResult:{})},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       
       if (!isPaymentApproved(paymentResult)) {
         // 3. Si falla, cancelamos
@@ -218,6 +224,9 @@ const PaymentModal = ({ isOpen, onClose, reserva, onSuccess, isPublic = true }) 
       }, 2000);
 
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H5',location:'src/components/common/PaymentModal.jsx:handlePayment:catch',message:'Unhandled payment flow error',data:{errorMessage:err?.response?.data?.message||err?.response?.data?.Message||err?.message,errorStatus:err?.response?.status,errorData:err?.response?.data},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error("Payment/Reservation Flow Error:", err);
       setStatus('error');
       setErrorMessage(getErrorMessage(err));
