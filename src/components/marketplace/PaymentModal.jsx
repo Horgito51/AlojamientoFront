@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { reservationService } from '../../api/reservationService'
 import { Modal } from '../common/Modal'
 import { getErrorMessage, sanitizeErrorMessage } from '../../utils/sweetAlert'
+import { API_BASE_URL } from '../../api/axiosConfig'
 
 // ---------------------------------------------------------------------------
 // Helpers – no dependen de estado React, son funciones puras
@@ -177,6 +178,9 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
     try {
       // ── 1. Crear la reserva ──────────────────────────────────────────
       setStepMsg('Creando reserva...')
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H8',location:'src/components/marketplace/PaymentModal.jsx:handlePay:beforeCreateReserva',message:'Marketplace payment flow start',data:{apiBaseUrl:API_BASE_URL,reservationKeys:Object.keys(reservationData||{}),hasReservaMoneda:Object.prototype.hasOwnProperty.call(reservationData||{},'moneda'),hasReservaMonedaUpper:Object.prototype.hasOwnProperty.call(reservationData||{},'Moneda')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.log('[PaymentModal] Creando reserva con payload:', reservationData)
 
       const reservaRaw   = await reservationService.createPublicReserva(reservationData)
@@ -203,6 +207,9 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
         tokenPago   : `card_${cardNumber.slice(-4)}_${Date.now()}`,
         referencia  : `RES-${createdGuid}-${Date.now()}`,
       }
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H9',location:'src/components/marketplace/PaymentModal.jsx:handlePay:beforeSimulatePayment',message:'Marketplace payment payload',data:{payloadKeys:Object.keys(payloadPago||{}),hasMoneda:Object.prototype.hasOwnProperty.call(payloadPago||{},'moneda'),hasMonedaUpper:Object.prototype.hasOwnProperty.call(payloadPago||{},'Moneda'),monto:payloadPago.monto},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       console.log('[PaymentModal] Enviando pago:', payloadPago)
       const payResult = await reservationService.simulatePayment(payloadPago)
@@ -237,6 +244,9 @@ export default function PaymentModal({ reservationData, user, total, onSuccess, 
       }, 1800)
 
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H10',location:'src/components/marketplace/PaymentModal.jsx:handlePay:catch',message:'Marketplace payment flow error',data:{status:err?.response?.status,errorMessage:err?.response?.data?.message||err?.response?.data?.Message||err?.message,errorData:err?.response?.data},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error('[PaymentModal] Error en el flujo de pago:', err?.response?.data ?? err)
 
       // Intentar cancelar la reserva si ya fue creada
