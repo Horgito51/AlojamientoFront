@@ -72,6 +72,12 @@ const isApproved = (result) => {
 // ---------------------------------------------------------------------------
 
 export default function PaymentModal({ reservationData, existingReservation, user, total, onSuccess, onClose }) {
+  const toPlainTextMessage = (message) =>
+    String(message || '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .trim()
+
   /* ------------------------------------------------------------------ */
   /*  Estado del formulario                                               */
   /* ------------------------------------------------------------------ */
@@ -257,7 +263,7 @@ export default function PaymentModal({ reservationData, existingReservation, use
       }
 
       setPhase('error')
-      setErrorMsg(getErrorMessage(err))
+      setErrorMsg(toPlainTextMessage(getErrorMessage(err)))
     } finally {
       submitting.current = false
     }
