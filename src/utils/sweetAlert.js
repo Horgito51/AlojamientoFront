@@ -47,7 +47,7 @@ export const getErrorMessage = (error) => {
         return `${field}: ${list.filter(Boolean).join(', ')}`
       })
       .filter(Boolean)
-      .join('<br />')
+      .join('\n')
     return sanitizeErrorMessage(errorMessages)
   }
 
@@ -72,7 +72,7 @@ export const sanitizeErrorMessage = (message) => {
 const appendTraceId = (message, data, error) => {
   const traceId = data?.traceId || data?.TraceId || error?.response?.headers?.['x-trace-id']
   if (!traceId) return message
-  return `${message}<br /><span class="text-xs opacity-80">Codigo de seguimiento: ${traceId}</span>`
+  return `${message}\nCodigo de seguimiento: ${traceId}`
 }
 
 export const showSuccess = (title, text) =>
