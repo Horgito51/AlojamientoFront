@@ -294,7 +294,7 @@ const MarketplacePage = () => {
 
       showSuccess(
         'Felicidades, has generado la reserva',
-        'Tu reserva fue creada exitosamente. Ahora puedes pagarla desde el apartado de pagos. Tienes 3 dias para cancelar sin inconvenientes.'
+        'Tu reserva fue creada exitosamente. Ahora puedes pagarla desde el apartado de pagos. Tienes maximo 1 hora para pagar; luego la reserva se cancela automaticamente.'
       )
       navigate('/pagos')
     } catch (err) {

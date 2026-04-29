@@ -2,21 +2,56 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { reservationService } from '../../api/reservationService'
 import { useAuth } from '../../hooks/useAuth'
-import { showError } from '../../utils/sweetAlert'
+import { showError, showSuccess } from '../../utils/sweetAlert'
+import PaymentModal from '../../components/marketplace/PaymentModal'
 
 const money = (value) => Number(Number(value) || 0).toFixed(2)
+const MAX_PAYMENT_WINDOW_MS = 60 * 60 * 1000
+const getReservationDate = (reserva) =>
+  reserva?.fechaReservaUtc || reserva?.fechaRegistroUtc || reserva?.fechaCreacionUtc || reserva?.createdAt || null
+const isExpiredForPayment = (reserva) => {
+  const rawDate = getReservationDate(reserva)
+  if (!rawDate) return false
+  const createdAtMs = new Date(rawDate).getTime()
+  if (Number.isNaN(createdAtMs)) return false
+  return Date.now() - createdAtMs > MAX_PAYMENT_WINDOW_MS
+}
 
 export default function PagosPage() {
   const { isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(false)
   const [reservas, setReservas] = useState([])
+  const [selectedReserva, setSelectedReserva] = useState(null)
 
   const fetchReservas = useCallback(async () => {
     try {
       setLoading(true)
       const response = await reservationService.getMisReservas({ limit: 100 })
-      const data = response.items || response.data || response || []
-      setReservas(Array.isArray(data) ? data : [])
+      let data = response.items || response.data || response || []
+      data = Array.isArray(data) ? data : []
+
+      const expiradas = data.filter((reserva) => {
+        const estado = String(reserva?.estadoReserva || '').toUpperCase()
+        const saldoPendiente = Number(reserva?.saldoPendiente || 0)
+        const guid = reserva?.reservaGuid || reserva?.ReservaGuid
+        return guid && saldoPendiente > 0 && estado !== 'CAN' && isExpiredForPayment(reserva)
+      })
+
+      if (expiradas.length > 0) {
+        for (const reserva of expiradas) {
+          const guid = reserva?.reservaGuid || reserva?.ReservaGuid
+          // #region agent log
+          fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H22',location:'src/pages/public/PagosPage.jsx:fetchReservas:autoCancelExpired',message:'Auto-cancel expired unpaid reservation',data:{reservaGuid:guid,fechaReserva:getReservationDate(reserva)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          await reservationService.cancelPublicReserva(guid, 'Cancelacion automatica por falta de pago dentro de 1 hora.')
+        }
+
+        const refreshed = await reservationService.getMisReservas({ limit: 100 })
+        const refreshedData = refreshed.items || refreshed.data || refreshed || []
+        data = Array.isArray(refreshedData) ? refreshedData : []
+      }
+
+      setReservas(data)
     } catch (error) {
       showError('Error', error)
     } finally {
@@ -29,9 +64,29 @@ export default function PagosPage() {
   }, [fetchReservas, isAuthenticated])
 
   const pendientes = useMemo(
-    () => reservas.filter((r) => Number(r?.saldoPendiente || 0) > 0 && String(r?.estadoReserva || '').toUpperCase() !== 'CAN'),
+    () =>
+      reservas.filter((r) => {
+        const estado = String(r?.estadoReserva || '').toUpperCase()
+        return Number(r?.saldoPendiente || 0) > 0 && estado !== 'CAN' && !isExpiredForPayment(r)
+      }),
     [reservas]
   )
+
+  const handleOpenPayment = (reserva) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H20',location:'src/pages/public/PagosPage.jsx:handleOpenPayment',message:'Open payment modal from payments section',data:{reservaGuid:reserva?.reservaGuid||reserva?.ReservaGuid,saldoPendiente:reserva?.saldoPendiente,totalReserva:reserva?.totalReserva},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    setSelectedReserva(reserva)
+  }
+
+  const handlePaymentSuccess = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7287/ingest/a863e764-f433-436b-a439-7ec838c455cd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'86bafb'},body:JSON.stringify({sessionId:'86bafb',runId:'initial',hypothesisId:'H21',location:'src/pages/public/PagosPage.jsx:handlePaymentSuccess',message:'Payment success callback from payments section',data:{reservaGuid:selectedReserva?.reservaGuid||selectedReserva?.ReservaGuid},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    setSelectedReserva(null)
+    await fetchReservas()
+    showSuccess('Pago completado', 'El pago se registró correctamente para tu reserva.')
+  }
 
   if (!isAuthenticated()) {
     return (
@@ -51,7 +106,7 @@ export default function PagosPage() {
     <div className="mx-auto max-w-6xl px-4 py-12">
       <div className="mb-8 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-200">
         <p className="font-semibold">Centro de pagos</p>
-        <p className="text-sm mt-1">Recuerda: despues de crear tu reserva, puedes cancelarla dentro de 3 dias.</p>
+        <p className="text-sm mt-1">Recuerda: tienes maximo 1 hora para pagar. Si no pagas en ese tiempo, la reserva se cancela automaticamente.</p>
       </div>
 
       {loading ? (
@@ -72,13 +127,28 @@ export default function PagosPage() {
                   <p className="text-xs uppercase tracking-wider text-slate-500">{reserva.codigoReserva || 'Reserva'}</p>
                   <p className="font-semibold">Saldo pendiente: ${money(reserva.saldoPendiente || reserva.totalReserva)}</p>
                 </div>
-                <Link to="/mis-reservas" className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
-                  Ir a pagar
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPayment(reserva)}
+                  className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Pagar ahora
+                </button>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {selectedReserva && (
+        <PaymentModal
+          reservationData={null}
+          existingReservation={selectedReserva}
+          user={{}}
+          total={Number(selectedReserva?.saldoPendiente || selectedReserva?.totalReserva || 0)}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setSelectedReserva(null)}
+        />
       )}
     </div>
   )

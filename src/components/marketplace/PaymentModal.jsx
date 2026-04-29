@@ -176,6 +176,7 @@ export default function PaymentModal({ reservationData, existingReservation, use
     let createdGuid = pick(existingReservation, ['reservaGuid', 'ReservaGuid', 'guidReserva', 'GuidReserva']) || null
     let reserva = unwrap(existingReservation || null)
     let reservaTotal = pick(reserva, ['totalReserva', 'TotalReserva', 'total', 'Total']) ?? total
+    let createdInThisFlow = false
 
     try {
       // ── 1. Resolver reserva (existente o crear nueva) ────────────────
@@ -189,6 +190,7 @@ export default function PaymentModal({ reservationData, existingReservation, use
         reserva = unwrap(reservaRaw)
         createdGuid = pick(reserva, ['reservaGuid', 'ReservaGuid', 'guidReserva', 'GuidReserva'])
         reservaTotal = pick(reserva, ['totalReserva', 'TotalReserva', 'total', 'Total']) ?? total
+        createdInThisFlow = true
         console.log('[PaymentModal] Reserva creada:', reserva)
       }
       if (!createdGuid) throw new Error('No se pudo obtener el identificador de la reserva para procesar el pago.')
@@ -248,7 +250,7 @@ export default function PaymentModal({ reservationData, existingReservation, use
       console.error('[PaymentModal] Error en el flujo de pago:', err?.response?.data ?? err)
 
       // Intentar cancelar la reserva si ya fue creada
-      if (createdGuid) {
+      if (createdGuid && createdInThisFlow) {
         try {
           await reservationService.cancelPublicReserva(createdGuid, 'Error técnico durante el proceso de pago.')
         } catch { /* ignorar */ }
